@@ -14,24 +14,24 @@ class IRCClient(asyncore.dispatcher):
     IDENT="booksbot"
     REALNAME="NotABot"
     IGNORE=["NOTICE","PART","QUIT", "332","333", "372", "353","366", "251", "252", "254", "255","265","266","396"]
-    LOOKING_FOR="cryptonomicon"
     CHANNEL="#ebooks"
-    EXTENSION="epub"
     STATUS=""
     OUT_DIR="/tmp"
-    OUTPUT_VALUE=""
-
+    TYPE="SEARCH"
     buffer = []
     readbuffer=b''
 
     joined=False
     connected=False
 
-    def __init__(self,book,extension):
+    def __init__(self,book,extension,t,logging=False,q=None):
         asyncore.dispatcher.__init__(self)
 
+        self.TYPE=t
         self.EXTENSION=extension
         self.LOOKING_FOR=book
+        self.LOGGING=logging
+        self.OUTPUT=q
 
         self.create_socket()
         self.connect( (self.HOST, self.PORT) )
@@ -42,13 +42,13 @@ class IRCClient(asyncore.dispatcher):
         self.send_queue(userstr)
 
     def handle_connect(self):
-        print("connected")
+        self.log("connected")
         self.STATUS="CONNECTED"
         self.connected=True
         pass
 
     def handle_close(self):
-        print("closed")
+        self.log("closed")
         self.STATUS="DISCONNECTED"
         self.connected=False
         self.close()
@@ -78,9 +78,10 @@ class IRCClient(asyncore.dispatcher):
                 if self.NICK not in msg_from:
                     continue
                 self.STATUS="JOINED"
-                print("Joined channel %s" % self.CHANNEL)
-                self.search(self.LOOKING_FOR)
+                self.log("Joined channel %s" % self.CHANNEL)
+                self.run_query()
                 self.joined=True
+                continue
 
             if comm=="PRIVMSG":
                 if words[2] != self.NICK:
@@ -98,6 +99,13 @@ class IRCClient(asyncore.dispatcher):
                 continue
 
 
+    def run_query(self):
+        if self.TYPE=="SEARCH":
+            self.search(self.LOOKING_FOR)
+            return
+
+        self.book(self.LOOKING_FOR)
+
     def parse_msg(self,msg):
         msg=msg.split(':')[2]
         msg=msg.replace("\x01","")
@@ -112,17 +120,21 @@ class IRCClient(asyncore.dispatcher):
         n=self.netcat(ip,port,size,filename)
         files=unar(n,"/tmp/")
 
-        self.OUTPUT_VALUE=[]
+        out=[]
         for f in files:
             if "searchbot" in f.lower():
-                self.list_books(f)
+                out.append(self.list_books(f))
+
+        if self.OUTPUT is not None:
+            self.OUTPUT.put(out)
+        self.close()
 
     def list_books(self,f):
         f=open(f,"r")
         lines=f.readlines()
         lines=[l.strip() for l in lines if self.EXTENSION in l.lower() ]
-    #    for l in lines:
-    #        print(l)
+        for l in lines:
+            self.log(l)
         return lines
 
     def netcat(self,ip,port,size,filename):
@@ -136,7 +148,7 @@ class IRCClient(asyncore.dispatcher):
         while True:
             data = s.recv(1024)
             if len(data)==0:
-                print("empty")
+                self.log("empty")
                 break
             count+=len(data)
             f.write(data)
@@ -149,7 +161,7 @@ class IRCClient(asyncore.dispatcher):
         return fname
 
     def search(self,book):
-        print("searching for %s" % book)
+        self.log("searching for %s" % book)
         self.send_queue("PRIVMSG %s :@search %s " % (self.CHANNEL,book))
 
     def pong(self,data):
@@ -171,7 +183,7 @@ class IRCClient(asyncore.dispatcher):
         self.buffer.append(add)
 
     def book(self,book):
-        print("asking for %s" % book)
+        self.log("asking for %s" % book)
         self.send_queue("PRIVMSG %s :%s " % (self.CHANNEL,book))
 
     def who(self):
@@ -187,6 +199,9 @@ class IRCClient(asyncore.dispatcher):
     def stop(self):
         self.close()
 
+    def log(self,val):
+        if self.LOGGING:
+            print(val)
 
 if __name__ == "__main__":
     if len(sys.argv)!=3:
@@ -194,6 +209,7 @@ if __name__ == "__main__":
         sys.exit(1)
     
     print("Looking for %s in format %s" % (sys.argv[1],sys.argv[2]))
-    client = IRCClient(sys.argv[1],sys.argv[2])
+    client = IRCClient(sys.argv[1],sys.argv[2],"SEARCH",True)
+    #client = IRCClient(sys.argv[1],sys.argv[2],"BOOK",True)
     loop_thread = threading.Thread(target=asyncore.loop)
     loop_thread.start()
