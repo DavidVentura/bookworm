@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
-import asyncore
 import threading
 import re
 import socket
 import sys
 from unzipper import unar
 
-class IRCClient(asyncore.dispatcher):
+class IRCClient():
     HOST="irc.irchighway.net"
     PORT=6667
     NICK="booksbot3321321"
@@ -20,12 +19,12 @@ class IRCClient(asyncore.dispatcher):
     TYPE="SEARCH"
     buffer = []
     readbuffer=b''
+    NOT_EXITED=True
 
     joined=False
     connected=False
 
     def __init__(self,book,extension,t,logging=False,q=None):
-        asyncore.dispatcher.__init__(self)
 
         self.TYPE=t
         self.EXTENSION=extension
@@ -33,13 +32,18 @@ class IRCClient(asyncore.dispatcher):
         self.LOGGING=logging
         self.OUTPUT=q
 
-        self.create_socket()
-        self.connect( (self.HOST, self.PORT) )
+        self.socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.connect( (self.HOST, self.PORT) )
+        self.handle_connect()
         nickstr="NICK %s" % self.NICK
         userstr="USER %s %s bla :%s" % (self.IDENT, self.HOST, self.REALNAME)
 
+
+        self.t=threading.Thread(target=self.handle_read)
+        self.t.start()
         self.send_queue(nickstr)
         self.send_queue(userstr)
+        self.t.join()
 
     def handle_connect(self):
         self.log("connected")
@@ -48,55 +52,61 @@ class IRCClient(asyncore.dispatcher):
         pass
 
     def handle_close(self):
+        self.NOT_EXITED=False
         self.log("closed")
         self.STATUS="DISCONNECTED"
         self.connected=False
-        self.close()
+        self.socket.close()
 
     def handle_read(self):
-        data=self.recv(1024)
-        if not (data[-1]==10 and data[-2]==13):
-            self.readbuffer+=data
-            return
+        while self.NOT_EXITED:
+            try:
+                data=self.socket.recv(1024)
+            except e:
+                break
 
-        data=self.readbuffer+data
-        data=data.replace(b'\x95', b'').replace(b'0xc2',b'').decode('utf-8','ignore') #purge mojibake
-        self.readbuffer=b''
-
-        lines=data.splitlines()
-
-        for line in lines:
-            words=line.split(' ')
-            if len(words)<2:
+            if not (data[-1]==10 and data[-2]==13):
+                self.readbuffer+=data
                 continue
-            msg_from=words[0]
-            comm=words[1]
-
-            if comm in self.IGNORE:
-                continue
-            if comm=="JOIN":
-                if self.NICK not in msg_from:
+    
+            data=self.readbuffer+data
+            data=data.replace(b'\x95', b'').replace(b'0xc2',b'').decode('utf-8','ignore') #purge mojibake
+            self.readbuffer=b''
+    
+            lines=data.splitlines()
+    
+            for line in lines:
+                words=line.split(' ')
+                if len(words)<2:
                     continue
-                self.STATUS="JOINED"
-                self.log("Joined channel %s" % self.CHANNEL)
-                self.run_query()
-                self.joined=True
-                continue
-
-            if comm=="PRIVMSG":
-                if words[2] != self.NICK:
+                msg_from=words[0]
+                comm=words[1]
+    
+                if comm in self.IGNORE:
                     continue
-                self.parse_msg(line);
-
-            if comm=="PING" or msg_from=="PING":
-                self.pong(line)
-                continue
-            if comm=="376": #END MOTD
-                self.join(self.CHANNEL)
-                continue
-
-            if not self.joined:
-                continue
+                if comm=="JOIN":
+                    if self.NICK not in msg_from:
+                        continue
+                    self.STATUS="JOINED"
+                    self.log("Joined channel %s" % self.CHANNEL)
+                    self.run_query()
+                    self.joined=True
+                    continue
+    
+                if comm=="PRIVMSG":
+                    if words[2] != self.NICK:
+                        continue
+                    self.parse_msg(line);
+    
+                if comm=="PING" or msg_from=="PING":
+                    self.pong(line)
+                    continue
+                if comm=="376": #END MOTD
+                    self.join_channel(self.CHANNEL)
+                    continue
+    
+                if not self.joined:
+                    continue
 
 
     def run_query(self):
@@ -109,7 +119,9 @@ class IRCClient(asyncore.dispatcher):
     def parse_msg(self,msg):
         msg=msg.split(':')[2]
         msg=msg.replace("\x01","")
-
+        if not msg.startswith("DCC"):
+            self.log(msg)
+            return
         args=msg.replace("DCC SEND ","").split(" ")
         size=int(args.pop())
         port=int(args.pop())
@@ -127,7 +139,7 @@ class IRCClient(asyncore.dispatcher):
 
         if self.OUTPUT is not None:
             self.OUTPUT.put(out)
-        self.close()
+        self.handle_close()
 
     def list_books(self,f):
         f=open(f,"r")
@@ -152,7 +164,7 @@ class IRCClient(asyncore.dispatcher):
                 break
             count+=len(data)
             f.write(data)
-            #sys.stdout.write("\r%s/%d" % (str(count).zfill(sizelen),size)) #progress
+            sys.stdout.write("\r%s/%d" % (str(count).zfill(sizelen),size)) #progress
             if count >= size:
                 break
 
@@ -168,22 +180,16 @@ class IRCClient(asyncore.dispatcher):
         msg=data.replace("PING ","")
         self.send_queue("PONG %s" % msg)
 
-    def join(self,channel):
+    def join_channel(self,channel):
         self.send_queue("JOIN %s" % channel)
-
-    def writable(self):
-        return (len(self.buffer) > 0 and self.connected)
-
-    def handle_write(self):
-        out=self.buffer.pop()
-        self.send(out)
 
     def send_queue(self,msg):
         add=bytes(str(msg),"utf-8")+bytes([13,10])
-        self.buffer.append(add)
+        self.socket.send(add)
+#        self.buffer.append(add)
 
     def book(self,book):
-        self.log("asking for %s" % book)
+        self.log("DOWNLOADING  %s" % book)
         self.send_queue("PRIVMSG %s :%s " % (self.CHANNEL,book))
 
     def who(self):
@@ -196,9 +202,6 @@ class IRCClient(asyncore.dispatcher):
         l=l.zfill(32)
         return [l[0:8],l[8:16],l[16:24],l[24:32]]
 
-    def stop(self):
-        self.close()
-
     def log(self,val):
         if self.LOGGING:
             print(val)
@@ -209,7 +212,5 @@ if __name__ == "__main__":
         sys.exit(1)
     
     print("Looking for %s in format %s" % (sys.argv[1],sys.argv[2]))
-    client = IRCClient(sys.argv[1],sys.argv[2],"SEARCH",True)
-    #client = IRCClient(sys.argv[1],sys.argv[2],"BOOK",True)
-    loop_thread = threading.Thread(target=asyncore.loop)
-    loop_thread.start()
+    #client = IRCClient(sys.argv[1],sys.argv[2],"SEARCH",True)
+    client = IRCClient(sys.argv[1],sys.argv[2],"BOOK",True)
