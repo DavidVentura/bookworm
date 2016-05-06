@@ -2,7 +2,6 @@
 
 import asyncore
 import threading
-import time
 import re
 import socket
 import sys
@@ -18,6 +17,9 @@ class IRCClient(asyncore.dispatcher):
     LOOKING_FOR="cryptonomicon"
     CHANNEL="#ebooks"
     EXTENSION="epub"
+    STATUS=""
+    OUT_DIR="/tmp"
+    OUTPUT_VALUE=""
 
     buffer = []
     readbuffer=b''
@@ -33,19 +35,21 @@ class IRCClient(asyncore.dispatcher):
 
         self.create_socket()
         self.connect( (self.HOST, self.PORT) )
-        nickstr="NICK %s\r\n" % self.NICK
-        userstr="USER %s %s bla :%s\r\n" % (self.IDENT, self.HOST, self.REALNAME)
+        nickstr="NICK %s" % self.NICK
+        userstr="USER %s %s bla :%s" % (self.IDENT, self.HOST, self.REALNAME)
 
         self.send_queue(nickstr)
         self.send_queue(userstr)
 
     def handle_connect(self):
         print("connected")
+        self.STATUS="CONNECTED"
         self.connected=True
         pass
 
     def handle_close(self):
         print("closed")
+        self.STATUS="DISCONNECTED"
         self.connected=False
         self.close()
 
@@ -73,6 +77,7 @@ class IRCClient(asyncore.dispatcher):
             if comm=="JOIN":
                 if self.NICK not in msg_from:
                     continue
+                self.STATUS="JOINED"
                 print("Joined channel %s" % self.CHANNEL)
                 self.search(self.LOOKING_FOR)
                 self.joined=True
@@ -97,72 +102,35 @@ class IRCClient(asyncore.dispatcher):
         msg=msg.split(':')[2]
         msg=msg.replace("\x01","")
 
-        args=msg.split(" ")
+        args=msg.replace("DCC SEND ","").split(" ")
         size=int(args.pop())
         port=int(args.pop())
         ip=self.ip_from_decimal(int(args.pop()))
-        args.pop(0) #"DCC"
-        args.pop(0) #"SEND"
         filename="_".join(args)
-        fname='/tmp/1234-%s' % filename
+        self.STATUS="RECEIVING"
 
-        n=self.netcat(ip,port,size,fname)
-        files=unar(fname,"/tmp/")
+        n=self.netcat(ip,port,size,filename)
+        files=unar(n,"/tmp/")
+
+        self.OUTPUT_VALUE=[]
         for f in files:
             if "searchbot" in f.lower():
                 self.list_books(f)
-
 
     def list_books(self,f):
         f=open(f,"r")
         lines=f.readlines()
         lines=[l.strip() for l in lines if self.EXTENSION in l.lower() ]
-        for l in lines:
-            print(l)
+    #    for l in lines:
+    #        print(l)
         return lines
 
-    def search(self,book):
-        print("searching for %s" % book)
-        self.send_queue("PRIVMSG %s :@search %s \r\n" % (self.CHANNEL,book))
-
-    def pong(self,data):
-        msg=data.replace("PING ","")
-        self.send_queue("PONG %s\r\n" % msg)
-
-    def join(self,channel):
-        self.send_queue("JOIN %s\r\n" % channel)
-
-    def writable(self):
-        return (len(self.buffer) > 0 and self.connected)
-
-    def handle_write(self):
-        out=self.buffer.pop()
-        self.send(out)
-
-    def send_queue(self,msg):
-        add=bytes(str(msg),"utf-8")
-        self.buffer.append(add)
-
-    def book(self,book):
-        print("asking for %s" % book)
-        self.send_queue("PRIVMSG %s :%s \r\n" % (self.CHANNEL,book))
-
-    def who(self):
-        self.send_queue("WHO %s" % self.CHANNEL)
-
-
-    def ip_from_decimal(self,dec):
-        return ".".join([ str(int(b,2)) for b in self.b_octets(bin(dec)[2:]) ])
-
-    def b_octets(self,l):
-        l=l.zfill(32)
-        return [l[0:8],l[8:16],l[16:24],l[24:32]]
-
-    def netcat(self,ip,port,size,fname):
+    def netcat(self,ip,port,size,filename):
         s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect((ip,port))
         #s.shutdown(socket.SHUT_WR)
         sizelen=len(str(size))
+        fname='%s/%s' % (self.OUT_DIR,filename)
         f=open(fname, 'wb')
         count=0
         while True:
@@ -172,19 +140,60 @@ class IRCClient(asyncore.dispatcher):
                 break
             count+=len(data)
             f.write(data)
-            #sys.stdout.write("\r%s/%d" % (str(count).zfill(sizelen),size))
-            #progress
+            #sys.stdout.write("\r%s/%d" % (str(count).zfill(sizelen),size)) #progress
             if count >= size:
                 break
 
         s.close()
         f.close()
+        return fname
 
-if len(sys.argv)!=3:
-    print("USAGE: %s <BOOK> <FORMAT>" % sys.argv[0])
-    sys.exit(1)
+    def search(self,book):
+        print("searching for %s" % book)
+        self.send_queue("PRIVMSG %s :@search %s " % (self.CHANNEL,book))
 
-print("Looking for %s in format %s" % (sys.argv[1],sys.argv[2]))
-client = IRCClient(sys.argv[1],sys.argv[2])
-loop_thread = threading.Thread(target=asyncore.loop, name="Asyncore Loop")
-loop_thread.start()
+    def pong(self,data):
+        msg=data.replace("PING ","")
+        self.send_queue("PONG %s" % msg)
+
+    def join(self,channel):
+        self.send_queue("JOIN %s" % channel)
+
+    def writable(self):
+        return (len(self.buffer) > 0 and self.connected)
+
+    def handle_write(self):
+        out=self.buffer.pop()
+        self.send(out)
+
+    def send_queue(self,msg):
+        add=bytes(str(msg),"utf-8")+bytes([13,10])
+        self.buffer.append(add)
+
+    def book(self,book):
+        print("asking for %s" % book)
+        self.send_queue("PRIVMSG %s :%s " % (self.CHANNEL,book))
+
+    def who(self):
+        self.send_queue("WHO %s" % self.CHANNEL)
+
+    def ip_from_decimal(self,dec):
+        return ".".join([ str(int(b,2)) for b in self.b_octets(bin(dec)[2:]) ])
+
+    def b_octets(self,l):
+        l=l.zfill(32)
+        return [l[0:8],l[8:16],l[16:24],l[24:32]]
+
+    def stop(self):
+        self.close()
+
+
+if __name__ == "__main__":
+    if len(sys.argv)!=3:
+        print("USAGE: %s <BOOK> <FORMAT>" % sys.argv[0])
+        sys.exit(1)
+    
+    print("Looking for %s in format %s" % (sys.argv[1],sys.argv[2]))
+    client = IRCClient(sys.argv[1],sys.argv[2])
+    loop_thread = threading.Thread(target=asyncore.loop)
+    loop_thread.start()
