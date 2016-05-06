@@ -51,7 +51,8 @@ class IRCClient(asyncore.dispatcher):
             return
 
         data=self.readbuffer+data
-        data=data.decode('utf-8')
+#        print(data)
+        data=data.replace(b'\x95', b'').replace(b'0xc2',b'').decode('utf-8','ignore') #purge mojibake
         self.readbuffer=b''
 
         lines=data.splitlines()
@@ -63,8 +64,8 @@ class IRCClient(asyncore.dispatcher):
             msg_from=words[0]
             comm=words[1]
 
-#            if comm in self.IGNORE:
-#                continue
+            if comm in self.IGNORE:
+                continue
             if comm=="JOIN" and self.NICK in msg_from:
                 print("JOINED")
                 print(msg_from)
@@ -78,16 +79,15 @@ class IRCClient(asyncore.dispatcher):
                     continue
                 self.parse_msg(line);
 
-            if comm=="PING":
-                print("PINGGGGG")
+            if comm=="PING" or msg_from=="PING":
                 self.pong(line)
                 continue
             if comm=="376": #END MOTD
                 self.join(self.CHANNEL)
                 continue
 
-#            if not self.joined:
-#                continue
+            if not self.joined:
+                continue
             print(line)
 
 
@@ -117,11 +117,7 @@ class IRCClient(asyncore.dispatcher):
         self.send_queue("PRIVMSG %s :@search %s \r\n" % (self.CHANNEL,book))
 
     def pong(self,data):
-        #PING :excalibur.pa.us.irchighway.net
-        print("PONG??")
-        print(data)
-        msg=data.split(':')[1]
-        print(msg)
+        msg=data.replace("PING ","")
         self.send_queue("PONG %s\r\n" % msg)
 
     def join(self,channel):
