@@ -11,14 +11,13 @@ from unzipper import unar
 class IRCClient(asyncore.dispatcher):
     HOST="irc.irchighway.net"
     PORT=6667
-    NICK="MauBot3321321"
-    IDENT="maubot"
-    REALNAME="MauritsBot"
+    NICK="booksbot3321321"
+    IDENT="booksbot"
+    REALNAME="NotABot"
     IGNORE=["NOTICE","PART","QUIT", "332","333", "372", "353","366", "251", "252", "254", "255","265","266","396"]
     LOOKING_FOR="cryptonomicon"
     CHANNEL="#ebooks"
     EXTENSION="epub"
-
 
     buffer = []
     readbuffer=b''
@@ -74,13 +73,10 @@ class IRCClient(asyncore.dispatcher):
             if comm=="JOIN":
                 if self.NICK not in msg_from:
                     continue
-
-                print(msg_from)
-                #self.who()
+                print("Joined channel %s" % self.CHANNEL)
                 self.search(self.LOOKING_FOR)
-                #self.book("!Mysfyt Neal Stephenson - Cryptonomicon (v5.0) (mobi).rar  ::INFO:: 1.7MB")
-                #self.book("!Pondering Neal Stephenson - Cryptonomicon (v5.0) (mobi).rar  ::INFO:: 2.1MB")
                 self.joined=True
+
             if comm=="PRIVMSG":
                 if words[2] != self.NICK:
                     continue
@@ -95,7 +91,6 @@ class IRCClient(asyncore.dispatcher):
 
             if not self.joined:
                 continue
-            print(line)
 
 
     def parse_msg(self,msg):
@@ -111,11 +106,8 @@ class IRCClient(asyncore.dispatcher):
         filename="_".join(args)
         fname='/tmp/1234-%s' % filename
 
-        print("File %s ip %s port: %d size: %d " % (filename,ip,port,size))
-        print(fname)
         n=self.netcat(ip,port,size,fname)
         files=unar(fname,"/tmp/")
-        print(files)
         for f in files:
             if "searchbot" in f.lower():
                 self.list_books(f)
@@ -149,7 +141,6 @@ class IRCClient(asyncore.dispatcher):
 
     def send_queue(self,msg):
         add=bytes(str(msg),"utf-8")
-        print("sending: %s" % msg)
         self.buffer.append(add)
 
     def book(self,book):
@@ -181,21 +172,19 @@ class IRCClient(asyncore.dispatcher):
                 break
             count+=len(data)
             f.write(data)
-            sys.stdout.write("\r%s/%d" % (str(count).zfill(sizelen),size))
+            #sys.stdout.write("\r%s/%d" % (str(count).zfill(sizelen),size))
+            #progress
             if count >= size:
-                print("")
-                print("finished")
                 break
 
-        print("")
-        print("END TRANSFER")
         s.close()
         f.close()
 
 if len(sys.argv)!=3:
-    print("USAGE: ./%s <BOOK> <FORMAT>" % sys.argv[0])
+    print("USAGE: %s <BOOK> <FORMAT>" % sys.argv[0])
     sys.exit(1)
 
+print("Looking for %s in format %s" % (sys.argv[1],sys.argv[2]))
 client = IRCClient(sys.argv[1],sys.argv[2])
 loop_thread = threading.Thread(target=asyncore.loop, name="Asyncore Loop")
 loop_thread.start()
