@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import random
 import threading
 import re
 import socket
@@ -9,14 +10,15 @@ from unzipper import unar
 class IRCClient():
     HOST="irc.irchighway.net"
     PORT=6667
-    NICK="booksbot3321321"
-    IDENT="booksbot"
-    REALNAME="NotABot"
+    NICK=""
+    IDENT=""
+    REALNAME=""
     IGNORE=["NOTICE","PART","QUIT", "332","333", "372", "353","366", "251", "252", "254", "255","265","266","396"]
     CHANNEL="#ebooks"
     STATUS=""
     OUT_DIR="/tmp"
     TYPE="SEARCH"
+    OUTPUT=""
     buffer = []
     readbuffer=b''
     NOT_EXITED=True
@@ -24,13 +26,16 @@ class IRCClient():
     joined=False
     connected=False
 
-    def __init__(self,book,extension,t,logging=False,q=None):
+    def __init__(self,book,extension,t,logging=False):
 
         self.TYPE=t
         self.EXTENSION=extension
         self.LOOKING_FOR=book
         self.LOGGING=logging
-        self.OUTPUT=q
+
+        self.NICK="bookbot"+self.random_hash()
+        self.IDENT="bookbot"+self.random_hash()
+        self.REALNAME="bookbot"+self.random_hash()
 
         self.socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect( (self.HOST, self.PORT) )
@@ -38,12 +43,13 @@ class IRCClient():
         nickstr="NICK %s" % self.NICK
         userstr="USER %s %s bla :%s" % (self.IDENT, self.HOST, self.REALNAME)
 
-
         self.t=threading.Thread(target=self.handle_read)
         self.t.start()
         self.send_queue(nickstr)
         self.send_queue(userstr)
-        self.t.join()
+
+    def random_hash(self):
+        return ("%032x" % random.getrandbits(128))[:10]
 
     def handle_connect(self):
         self.log("connected")
@@ -64,7 +70,8 @@ class IRCClient():
                 data=self.socket.recv(1024)
             except e:
                 break
-
+            if len(data) < 2:
+                continue
             if not (data[-1]==10 and data[-2]==13):
                 self.readbuffer+=data
                 continue
@@ -110,6 +117,7 @@ class IRCClient():
 
 
     def run_query(self):
+        self.STATUS="WAITING"
         if self.TYPE=="SEARCH":
             self.search(self.LOOKING_FOR)
             return
@@ -122,11 +130,12 @@ class IRCClient():
         if not msg.startswith("DCC"):
             self.log(msg)
             return
+
         args=msg.replace("DCC SEND ","").split(" ")
         size=int(args.pop())
         port=int(args.pop())
         ip=self.ip_from_decimal(int(args.pop()))
-        filename="_".join(args)
+        filename="_".join(args).replace('"','')
         self.STATUS="RECEIVING"
 
         n=self.netcat(ip,port,size,filename)
@@ -137,8 +146,7 @@ class IRCClient():
             if "searchbot" in f.lower():
                 out.append(self.list_books(f))
 
-        if self.OUTPUT is not None:
-            self.OUTPUT.put(out)
+        self.OUTPUT=out
         self.handle_close()
 
     def list_books(self,f):
@@ -158,13 +166,15 @@ class IRCClient():
         f=open(fname, 'wb')
         count=0
         while True:
-            data = s.recv(1024)
+            data = s.recv(4096)
             if len(data)==0:
                 self.log("empty")
                 break
             count+=len(data)
             f.write(data)
-            sys.stdout.write("\r%s/%d" % (str(count).zfill(sizelen),size)) #progress
+            self.STATUS="DOWNLOADING %s/%d" % (str(count).zfill(sizelen),size) #progress
+
+#            sys.stdout.write("\r%s/%d" % (str(count).zfill(sizelen),size)) #progress
             if count >= size:
                 break
 
@@ -212,5 +222,5 @@ if __name__ == "__main__":
         sys.exit(1)
     
     print("Looking for %s in format %s" % (sys.argv[1],sys.argv[2]))
-    #client = IRCClient(sys.argv[1],sys.argv[2],"SEARCH",True)
-    client = IRCClient(sys.argv[1],sys.argv[2],"BOOK",True)
+    client = IRCClient(sys.argv[1],sys.argv[2],"SEARCH",True)
+    #client = IRCClient(sys.argv[1],sys.argv[2],"BOOK",True)
