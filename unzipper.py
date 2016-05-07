@@ -8,8 +8,9 @@ def unar(source,dest_dir):
     if source.lower().endswith("rar"):
         return unrar(source,dest_dir)
 
-    print(" KQHJKWQHRKJQHEWRKJHEWK?????")
-    return []
+    print("NOT RAR? NOT ZIP? I'm panicking.")
+    print("I got %s" % source)
+    return [source]
 
 def unzip(source_filename, dest_dir):
     out=[]
