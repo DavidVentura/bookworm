@@ -146,7 +146,7 @@ class IRCClient():
             if "searchbot" in f.lower():
                 out.append(self.list_books(f))
 
-        self.OUTPUT=out
+        self.OUTPUT=[item for sublist in out for item in sublist]
         self.handle_close()
 
     def list_books(self,f):

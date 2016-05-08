@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html ng-app="app">
+	<head>
+		<script src="js/angular.min.js"></script>
+		<script src="js/app.js"></script>
+	</head>
+<body>
+	<div ng-controller="main">
+		<table>
+			<tr>
+				<th>ID</th>
+				<th>Type</th>
+				<th>Query</th>
+				<th>Status</th>
+				<th>Output</th>
+			</tr>
+			<tr ng-repeat="l in list track by l.ID">
+				<td> {{l.ID}} </td>
+				<td> {{l.TYPE}} </td>
+				<td> {{l.QUERY}} </td>
+				<td> {{l.STATUS}} </td>
+				<td> 
+					<div ng-repeat="o in l.OUT">
+						<a ng-click="download(o)"> {{o }}</a>
+					</div>
+				</td>
+			</tr>
+		</table>
+		<div>
+			Search books:
+			Book:<input type="text" ng-model="book">
+			Extension: <input type="text" ng-model="extension">
+			<input type="button" value="search" ng-click="searchBook(book,extension)">
+		</div>
+		<input type="button" value="refresh" ng-click="getList()">
+	</div>
+</body>
+</html>
+
