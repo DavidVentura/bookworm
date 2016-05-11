@@ -1,20 +1,53 @@
+#!/usr/bin/env python3
 import os
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from qmanager import qManager
+import urllib
 
 # Port on which server will run.
 PORT = 8080
+BASE_PATH="/test/" #changes based on webserver
+FILE_PATH="/tmp/"
 
 
 class HTTPRequestHandler(BaseHTTPRequestHandler):
     q = qManager()
 
     def do_GET(self):
-        self.send_200()
-        out=json.dumps(self.q.task_status())
+        if self.path==BASE_PATH:
         #self.wfile.write(bytes()) #fileHandle.read().encode()
-        self.wfile.write(bytes(out,"utf-8")) #fileHandle.read().encode()
+            self.send_200()
+            out=json.dumps(self.q.task_status())
+            self.wfile.write(bytes(out,"utf-8")) #fileHandle.read().encode()
+            return
+
+        p=urllib.parse.unquote(self.path.replace(BASE_PATH,""))
+        path=FILE_PATH+p
+        print(path)
+        #mime=mimetypes.guess_type(path) #fails on mobi, epub
+        mime=""
+        if p.endswith("mobi"):
+            mime="application/x-mobipocket-ebook"
+        if p.endswith("epub"):
+            mime="application/epub+zip"
+        if p.endswith("pdf"):
+            mime="application/pdf"
+        if p.endswith("html"):
+            mime="text/html"
+        
+        self.send_response(200)
+        self.send_header('Content-type', mime)
+        self.send_header('Content-Disposition', 'attachment;filename="%s"'%p)
+        self.end_headers()
+
+        fp = open(path,'rb')
+        while True:
+            b = fp.read(8192)
+            if b:
+                self.wfile.write(b) #fileHandle.read().encode()
+            else:
+                break
 
     def send_400(self):
         self.send_response(400, 'NOT OK')
