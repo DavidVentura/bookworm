@@ -12,6 +12,7 @@
 				<th>Type</th>
 				<th>Query</th>
 				<th>Status</th>
+				<th>Elapsed</th>
 				<th>Output</th>
 			</tr>
 			<tr ng-repeat="l in list track by l.ID">
@@ -19,9 +20,15 @@
 				<td> {{l.TYPE}} </td>
 				<td> {{l.QUERY}} </td>
 				<td> {{l.STATUS}} </td>
+				<td> <p ng-if="l.STATUS!='DISCONNECTED'">{{l.ELAPSED}}</p> </td>
 				<td> 
 					<div ng-repeat="o in l.OUT">
-						<a ng-click="download(o)"> {{o }}</a>
+						<div ng-if="l.TYPE=='SEARCH'">
+							<a ng-click="download(o)"> {{o }}</a>
+						</div>
+						<div ng-if="l.TYPE=='BOOK'">
+							<a ng-href="/test/{{o}}" target="_blank">Download {{o }}</a>
+						</div>
 					</div>
 				</td>
 			</tr>
