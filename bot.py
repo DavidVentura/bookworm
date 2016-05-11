@@ -16,22 +16,23 @@ class IRCClient():
     IGNORE=["NOTICE","PART","QUIT", "332","333", "372", "353","366", "251", "252", "254", "255","265","266","396"]
     CHANNEL="#ebooks"
     STATUS=""
-    OUT_DIR="/tmp"
     TYPE="SEARCH"
     OUTPUT=""
     buffer = []
     readbuffer=b''
     NOT_EXITED=True
-
+    EXTRA_OUTPUT=""
+    PATH=""
     joined=False
     connected=False
 
-    def __init__(self,book,extension,t,logging=False):
+    def __init__(self,book,extension,t,logging=False,path="/tmp/"):
 
         self.TYPE=t
         self.EXTENSION=extension
         self.LOOKING_FOR=book
         self.LOGGING=logging
+        self.PATH=path
 
         self.NICK="bookbot"+self.random_hash()
         self.IDENT="bookbot"+self.random_hash()
@@ -128,6 +129,7 @@ class IRCClient():
         msg=msg.split(':')[2]
         msg=msg.replace("\x01","")
         if not msg.startswith("DCC"):
+            self.EXTRA_OUTPUT=msg;
             self.log(msg)
             return
 
@@ -139,14 +141,24 @@ class IRCClient():
         self.STATUS="RECEIVING"
 
         n=self.netcat(ip,port,size,filename)
-        files=unar(n,"/tmp/")
+        files=unar(n,self.PATH)
 
         out=[]
         for f in files:
             if "searchbot" in f.lower():
                 out.append(self.list_books(f))
 
-        self.OUTPUT=[item for sublist in out for item in sublist]
+        self.OUTPUT=[]
+        if len(out)>0:
+            if type(out[0]) is list:
+                self.OUTPUT=[item for sublist in out for item in sublist]
+            else:
+                self.OUTPUT=out
+            self.OUTPUT=list(set(self.OUTPUT))
+        else:
+            self.OUTPUT=files
+
+        self.OUTPUT=[i.replace(self.PATH,"") for i in self.OUTPUT  ]
         self.handle_close()
 
     def list_books(self,f):
@@ -162,7 +174,7 @@ class IRCClient():
         s.connect((ip,port))
         #s.shutdown(socket.SHUT_WR)
         sizelen=len(str(size))
-        fname='%s/%s' % (self.OUT_DIR,filename)
+        fname=('%s/%s' % (self.PATH,filename)).replace("//","/")
         f=open(fname, 'wb')
         count=0
         while True:
@@ -172,7 +184,8 @@ class IRCClient():
                 break
             count+=len(data)
             f.write(data)
-            self.STATUS="DOWNLOADING %s/%d" % (str(count).zfill(sizelen),size) #progress
+            perc=int(100*count/size)
+            self.STATUS="DOWNLOADING %d%%" % perc #progress
 
 #            sys.stdout.write("\r%s/%d" % (str(count).zfill(sizelen),size)) #progress
             if count >= size:
