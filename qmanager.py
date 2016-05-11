@@ -11,13 +11,16 @@ class qManager:
 
     tasks = []
     last_id=0
+    PATH=""
 
+    def __init__(self,path="/tmp/"):
+        self.PATH=path
 
     def new_dl(self,string):
-        self.new_task(string,IRCClient(string,"","BOOK",logging=False))
+        self.new_task(string,IRCClient(string,"","BOOK",logging=False,path=self.PATH))
 
     def new_search(self,keywords,format):
-        self.new_task(keywords,IRCClient(keywords,format,"SEARCH",logging=False))
+        self.new_task(keywords,IRCClient(keywords,format,"SEARCH",logging=False,path=self.PATH))
 
     def new_task(self,query,t):
         nt = task(query,t,self.last_id)
@@ -33,6 +36,7 @@ class qManager:
                 "OUT": t.get_output(),
                 "ELAPSED": int(elapsed),
                 "QUERY": t.QUERY,
+                "EXTRA": t.get_extra(),
                 "TYPE": t.get_type()})
 
         return ret
@@ -50,6 +54,8 @@ class task:
         self.START_TIME=time()
         pass
 
+    def get_extra(self):
+        return self.CLIENT.EXTRA_OUTPUT;
     def get_status(self):
        self.OUTPUT=self.CLIENT.OUTPUT
        return self.CLIENT.STATUS 
@@ -62,7 +68,7 @@ class task:
 
 
 
-#CLI INTERFACE
+#BASIC CLI INTERFACE
 if __name__ == "__main__":
     q = qManager()
     while True:
