@@ -1,6 +1,6 @@
 app=angular.module('app', []);
 
-app.controller('main', function($scope,$http) {
+app.controller('main', function($scope,$http,$interval) {
 	$scope.list=[];
 	$scope.book="";
 	$scope.extension="";
@@ -44,4 +44,6 @@ app.controller('main', function($scope,$http) {
 			console.log("err");
 		});
 	};
+
+	$interval($scope.getList, 1000);
 });

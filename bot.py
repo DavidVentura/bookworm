@@ -130,6 +130,7 @@ class IRCClient():
         msg=msg.replace("\x01","")
         if not msg.startswith("DCC"):
             self.EXTRA_OUTPUT=msg;
+            print(msg)
             self.log(msg)
             return
 
