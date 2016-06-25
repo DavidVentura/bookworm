@@ -176,7 +176,7 @@ class IRCClient():
     def list_books(self,f):
         f=open(f,"r")
         lines=f.readlines()
-        lines=[l.strip().replace('\r','') for l in lines if self.EXTENSION in l.lower() and l.startswith('!') ]
+        lines=[l.strip().replace('\r','') for l in lines if self.EXTENSION in l.lower() and l.startswith('!') and "html" not in l.lower() ]
         for l in lines:
             self.log(l)
         return lines
