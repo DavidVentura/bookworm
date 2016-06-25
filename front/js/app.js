@@ -68,7 +68,7 @@ app.controller('main', function($scope,$http,$interval) {
 
 app.directive('progressBar', function(){
 	return {
-		template: '<div id="progress-bar"><div id="progress" style="width:{{progress}}%"><div id="label">{{progress}}%</div></div></div>',
+		template: '<div id="progress-bar"><div id="label">{{progress}}%</div><div id="progress" style="width:{{progress}}%"></div></div>',
 		restrict: 'E',
 		scope: {
 			progress: '='
