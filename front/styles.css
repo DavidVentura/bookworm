@@ -200,17 +200,18 @@ th.output{
     border-radius: 3px;
 }
 #progress {
-  position: absolute;
   height: 100%;
   background-color: #A1C1BE;
   border-radius: 3px;
 }
 
 #label {
+	float:left;
     text-align: center;
     line-height: 20px;
     color: white;
     font-size: 75%;
+	width:100%;
 }
 
 .expanded{
