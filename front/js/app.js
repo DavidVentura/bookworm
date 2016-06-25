@@ -5,8 +5,9 @@ app.controller('main', function($scope,$http,$interval) {
 	$scope.book="";
 	$scope.extension="";
 
+	$scope.activeTab = 'SEARCH';
 	$scope.getList = function() {
-		$http.get("/test/").then(
+		$http.get("http://192.168.1.7/test/").then(
 		function(data) {
 			/*
 			data.data=data.data.map(function(el) {
@@ -19,13 +20,13 @@ app.controller('main', function($scope,$http,$interval) {
 		},
 		function(data){
 			console.log("error");
-			console.log(data);
+
 		});
 	}
 	$scope.getList();
 
 	$scope.download = function(book) {
-		$http.post("/test/?adasasd",{"type":"BOOK","book":book}).then(
+		$http.post("http://192.168.1.7/test/?adasasd",{"type":"BOOK","book":book}).then(
 		function(data) {
 			$scope.getList();
 		},
@@ -35,7 +36,7 @@ app.controller('main', function($scope,$http,$interval) {
 		});
 	};
 	$scope.searchBook = function(book,extension){
-		$http.post("/test/?ewqewqewq", {"type":"search","book":book,"extension":extension}).then(
+		$http.post("http://192.168.1.7/test/?ewqewqewq", {"type":"search","book":book,"extension":extension}).then(
 		function(data) {
 			console.log("success");
 			$scope.getList();
@@ -45,5 +46,17 @@ app.controller('main', function($scope,$http,$interval) {
 		});
 	};
 
+	$scope.isActiveTab = function(tab){
+		return $scope.activeTab === tab;
+	}
+
+	$scope.changeTab = function(tab){
+		$scope.activeTab = tab;
+	}
+
+	$scope.limit = {};
+	$scope.showMore = function(l){
+		$scope.limit[l.ID] = $scope.limit[l.ID] ? undefined : l.OUT.length;
+	}
 	$interval($scope.getList, 1000);
 });
