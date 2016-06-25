@@ -16,6 +16,7 @@ class IRCClient():
     IGNORE=["NOTICE","PART","QUIT", "332","333", "372", "353","366", "251", "252", "254", "255","265","266","396"]
     CHANNEL="#ebooks"
     STATUS=""
+    PROGRESS=0
     TYPE="SEARCH"
     OUTPUT=""
     buffer = []
@@ -64,6 +65,16 @@ class IRCClient():
         self.STATUS="DISCONNECTED"
         self.connected=False
         self.socket.close()
+
+    def do_timeout(self):
+        if not self.NOT_EXITED:
+            return
+        self.NOT_EXITED=False
+        self.log("Abort mission")
+        self.STATUS="TIMED OUT"
+        self.connect=False
+        self.socket.close()
+
 
     def handle_read(self):
         while self.NOT_EXITED:
@@ -165,7 +176,7 @@ class IRCClient():
     def list_books(self,f):
         f=open(f,"r")
         lines=f.readlines()
-        lines=[l.strip() for l in lines if self.EXTENSION in l.lower() ]
+        lines=[l.strip().replace('\r','') for l in lines if self.EXTENSION in l.lower() and l.startswith('!') ]
         for l in lines:
             self.log(l)
         return lines
@@ -186,7 +197,8 @@ class IRCClient():
             count+=len(data)
             f.write(data)
             perc=int(100*count/size)
-            self.STATUS="DOWNLOADING %d%%" % perc #progress
+            self.STATUS="DOWNLOADING" #% perc #progress
+            self.PROGRESS=perc
 
 #            sys.stdout.write("\r%s/%d" % (str(count).zfill(sizelen),size)) #progress
             if count >= size:

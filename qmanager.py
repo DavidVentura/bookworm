@@ -33,6 +33,7 @@ class qManager:
             elapsed= time()-t.START_TIME
             ret.append({"ID": t.ID,
                 "STATUS": t.get_status(),
+                "PROGRESS": t.get_progress(),
                 "OUT": t.get_output(),
                 "ELAPSED": int(elapsed),
                 "QUERY": t.QUERY,
@@ -54,9 +55,14 @@ class task:
         self.START_TIME=time()
         pass
 
+    def get_progress(self):
+        return self.CLIENT.PROGRESS;
+
     def get_extra(self):
         return self.CLIENT.EXTRA_OUTPUT;
     def get_status(self):
+       if time() - self.START_TIME > 600:
+           self.CLIENT.do_timeout()
        self.OUTPUT=self.CLIENT.OUTPUT
        return self.CLIENT.STATUS 
 
