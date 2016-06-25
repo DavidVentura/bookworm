@@ -20,6 +20,13 @@ h2 {
   border-bottom: 1px solid rgba(226,227,217, 0.5);
 }
 
+::selection {
+  background:rgba(161,193,190, 0.5);
+}
+::-moz-selection {
+  background:rgba(161,193,190, 0.5);
+}
+
 .form {
   padding: 10px;
 }
@@ -98,6 +105,15 @@ input[type="button"]:hover {
   background-color: rgba(226,227,217,0.3);
 }
 
+.tabs > ul > li > label {
+  font-weight: bold;
+  background-color: rgb(184, 152, 170);
+  color: white;
+  border-radius: 15px;
+  font-size: 90%;
+  padding: 2px 7px;
+}
+
 .tab-content {
   border: 1px solid  #E2E3D9;
   padding: 20px;
@@ -113,7 +129,7 @@ table {
 }
 
 th {
-  padding: 15px 5px;
+  padding: 10px;
   text-align: left;
   border-bottom: 1px solid #A9A59E;
   text-transform: uppercase;
@@ -149,10 +165,18 @@ td > a {
 td > ul {
   list-style: none;
   padding: 0px;
+  margin-top: 0px;
+}
+
+td > i {
+  color: #929389;
+  font-size: 80%;
+  text-decoration: underline;
 }
 
 td > ul > li {
   margin-bottom: 5px;
+  margin-left: 10px;
 }
 
 td > ul > li:hover {
@@ -166,6 +190,27 @@ td > ul > li > a {
 }
 th.output{
   width: 70%;
+}
+
+#progress-bar {
+    position: relative;
+    width: 100%;
+    height: 20px;
+    background-color: #E2E3D9;
+    border-radius: 3px;
+}
+#progress {
+  position: absolute;
+  height: 100%;
+  background-color: #A1C1BE;
+  border-radius: 3px;
+}
+
+#label {
+    text-align: center;
+    line-height: 20px;
+    color: white;
+    font-size: 75%;
 }
 
 .expanded{

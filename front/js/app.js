@@ -28,6 +28,7 @@ app.controller('main', function($scope,$http,$interval) {
 	$scope.download = function(book) {
 		$http.post("http://192.168.1.7/test/?adasasd",{"type":"BOOK","book":book}).then(
 		function(data) {
+			$scope.newElement(true);
 			$scope.getList();
 		},
 		function(data){
@@ -35,6 +36,10 @@ app.controller('main', function($scope,$http,$interval) {
 			console.log(data);
 		});
 	};
+
+	$scope.newElement = function(bool){
+		$scope.new = bool;
+	}
 	$scope.searchBook = function(book,extension){
 		$http.post("http://192.168.1.7/test/?ewqewqewq", {"type":"search","book":book,"extension":extension}).then(
 		function(data) {
@@ -59,4 +64,17 @@ app.controller('main', function($scope,$http,$interval) {
 		$scope.limit[l.ID] = $scope.limit[l.ID] ? undefined : l.OUT.length;
 	}
 	$interval($scope.getList, 1000);
+});
+
+app.directive('progressBar', function(){
+	return {
+		template: '<div id="progress-bar"><div id="progress" style="width:{{progress}}%"><div id="label">{{progress}}%</div></div></div>',
+		restrict: 'E',
+		scope: {
+			progress: '='
+		},
+		link: function(scope, elem, attrs){
+			console.log('progress', scope.progress, elem, attrs);
+		}
+	}
 });
