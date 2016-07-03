@@ -7,7 +7,7 @@ import urllib
 
 # Port on which server will run.
 PORT = 8080
-BASE_PATH="/test/" #changes based on webserver
+BASE_PATH="/backend/" #changes based on webserver
 FILE_PATH="/tmp/"
 
 
