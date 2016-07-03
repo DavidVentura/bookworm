@@ -1,13 +1,14 @@
 app=angular.module('app', []);
 
 app.controller('main', function($scope,$http,$interval) {
+	var ROOT_PATH="/backend/";
 	$scope.list=[];
 	$scope.book="";
 	$scope.extension="";
 
 	$scope.activeTab = 'SEARCH';
 	$scope.getList = function() {
-		$http.get("http://192.168.1.7/test/").then(
+		$http.get(ROOT_PATH).then(
 		function(data) {
 			/*
 			data.data=data.data.map(function(el) {
@@ -26,7 +27,7 @@ app.controller('main', function($scope,$http,$interval) {
 	$scope.getList();
 
 	$scope.download = function(book) {
-		$http.post("http://192.168.1.7/test/?adasasd",{"type":"BOOK","book":book}).then(
+		$http.post(ROOT_PATH+"?adasasd",{"type":"BOOK","book":book}).then(
 		function(data) {
 			$scope.newElement(true);
 			$scope.getList();
@@ -41,7 +42,7 @@ app.controller('main', function($scope,$http,$interval) {
 		$scope.new = bool;
 	}
 	$scope.searchBook = function(book,extension){
-		$http.post("http://192.168.1.7/test/?ewqewqewq", {"type":"search","book":book,"extension":extension}).then(
+		$http.post(ROOT_PATH+"?ewqewqewq", {"type":"search","book":book,"extension":extension}).then(
 		function(data) {
 			console.log("success");
 			$scope.getList();
