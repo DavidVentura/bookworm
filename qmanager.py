@@ -5,6 +5,7 @@ import queue
 import shlex
 import asyncore
 import datetime
+import re
 from time import strftime,time
 
 class qManager:
@@ -68,11 +69,20 @@ class task:
 
     def get_type(self):
        return self.CLIENT.TYPE
+
     def get_output(self):
-       return self.OUTPUT
-
-
-
+       if type(self.OUTPUT) == str or self.OUTPUT is None:
+           return self.OUTPUT
+       books = self.OUTPUT
+       ret=[]
+       for book in books:
+           groups = re.search("(?P<BOT>^!\w+)(?P<BOOK>.*?)(?P<INFO>::INFO.*$)",book)
+           if groups is None:
+               ret.append("None?")
+           groups=groups.groupdict()
+           groups["TEXT"]=book
+           ret.append(groups)
+       return ret
 
 #BASIC CLI INTERFACE
 if __name__ == "__main__":
