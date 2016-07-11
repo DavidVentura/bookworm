@@ -64,7 +64,7 @@ app.controller('main', function($scope,$http,$interval) {
 	$scope.showMore = function(l){
 		$scope.limit[l.ID] = $scope.limit[l.ID] ? undefined : l.OUT.length;
 	}
-	$interval($scope.getList, 2500);
+	$interval($scope.getList, 3500);
 });
 
 app.directive('progressBar', function(){

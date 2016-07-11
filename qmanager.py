@@ -73,13 +73,18 @@ class task:
     def get_output(self):
        if type(self.OUTPUT) == str or self.OUTPUT is None:
            return self.OUTPUT
+       TAGS_R = re.compile('[\[(].*?[\])]|\.rar|v\d.*?\s')
        books = self.OUTPUT
        ret=[]
        for book in books:
-           groups = re.search("(?P<BOT>^!\w+)(?P<BOOK>.*?)(?P<INFO>::INFO.*$)",book)
+           book = book.replace("---","")
+           groups = re.search("(?P<BOT>^!\w+)(?P<BOOK>.*?)(?P<INFO>::INFO.*)?$",book)
            if groups is None:
-               ret.append("None?")
+               #print("[No groups] %s" % book)
+               return books
            groups=groups.groupdict()
+           groups["BOOK"]=re.sub(TAGS_R,"",groups["BOOK"]) #remove tags from book
+           groups["TAGS"]=[ r.strip("()[]") for r in re.findall(TAGS_R,book) ]
            groups["TEXT"]=book
            ret.append(groups)
        return ret

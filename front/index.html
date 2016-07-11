@@ -49,7 +49,7 @@
 										<i ng-show="l.STATUS=='DISCONNECTED'">Found {{l.OUT.length}} matches:</i>
 										<ul>
 											<li ng-repeat="o in l.OUT | limitTo:limit[l.ID]||5">
-												<a ng-click="download(o.text)">{{o.bot}} --- {{o.book}} --- {{o.info}}</a>
+												<a ng-click="download(o.TEXT)">{{o.BOT}} --- {{o.BOOK}} --- {{o.TAGS}} --- {{o.INFO}}</a>
 											</li>
 										</ul>
 									</td>
