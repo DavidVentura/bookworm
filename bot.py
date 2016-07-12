@@ -106,7 +106,7 @@ class IRCClient():
                 if comm in self.IGNORE:
                     continue
                 if comm=="JOIN":
-                    if self.NICK not in msg_from:
+                    if self.NICK not in msg_from: #msg "NICK joined the channel" not about me
                         continue
                     self.STATUS="JOINED"
                     self.log("Joined channel %s" % self.CHANNEL)
@@ -115,18 +115,18 @@ class IRCClient():
                     continue
     
                 if comm=="PRIVMSG":
-                    if words[2] != self.NICK:
+                    if words[2] != self.NICK: #private message not addressed to me
                         continue
                     self.parse_msg(line);
     
-                if comm=="PING" or msg_from=="PING":
+                if comm=="PING" or msg_from=="PING": #respond ping to avoid getting kicked
                     self.pong(line)
                     continue
                 if comm=="376": #END MOTD
-                    self.join_channel(self.CHANNEL)
+                    self.join_channel(self.CHANNEL) #MOTD complete, lets join the channel
                     continue
     
-                if not self.joined:
+                if not self.joined: #waiting 
                     continue
 
 
@@ -171,6 +171,10 @@ class IRCClient():
         else:
             self.OUTPUT=files
 
+        if self.TYPE == "BOOK":
+            self.log("Files: ")
+            self.log(self.OUTPUT)
+
         self.OUTPUT=[i.replace(self.PATH,"") for i in self.OUTPUT  ]
         self.handle_close()
 
@@ -184,8 +188,8 @@ class IRCClient():
 
     def netcat(self,ip,port,size,filename):
         s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.log("Receiving file")
         s.connect((ip,port))
-        #s.shutdown(socket.SHUT_WR)
         sizelen=len(str(size))
         fname=('%s/%s' % (self.PATH,filename)).replace("//","/")
         f=open(fname, 'wb')
@@ -201,12 +205,13 @@ class IRCClient():
             self.STATUS="DOWNLOADING" #% perc #progress
             self.PROGRESS=perc
 
-#            sys.stdout.write("\r%s/%d" % (str(count).zfill(sizelen),size)) #progress
+            self.log("\r%d%%" % perc,instant=True)
             if count >= size:
                 break
 
         s.close()
         f.close()
+        self.log("") #newline
         return fname
 
     def search(self,book):
@@ -225,7 +230,7 @@ class IRCClient():
         self.socket.send(add)
 
     def book(self,book):
-        self.log("DOWNLOADING  %s" % book)
+        self.log("Asking for '%s'" % book)
         self.send_queue("PRIVMSG %s :%s " % (self.CHANNEL,book))
 
     def who(self):
@@ -238,14 +243,39 @@ class IRCClient():
         l=l.zfill(32)
         return [l[0:8],l[8:16],l[16:24],l[24:32]]
 
-    def log(self,val):
+    def log(self,val,instant=False):
         if self.LOGGING:
-            print(val)
+            if not instant:
+                print(val)
+            else:
+                sys.stdout.write(val)
+
+def usage():
+    print("USAGE:")
+    print("\t %s SEARCH <BOOK> <FORMAT>" % sys.argv[0])
+    print("\t %s BOOK <BOT COMMAND>" % sys.argv[0])
+    sys.exit(1)
 
 if __name__ == "__main__":
-    if len(sys.argv)!=4:
-        print("USAGE: %s <SEARCH|BOOK> <BOOK> <FORMAT>" % sys.argv[0])
-        sys.exit(1)
+    if len(sys.argv)==4:
+        if(sys.argv[1] != "SEARCH"):
+            usage()
+        mode  = sys.argv[1]
+        query = sys.argv[2]
+        grep  = sys.argv[3]
+
+    elif len(sys.argv)==3:
+        if(sys.argv[1] != "BOOK"):
+            usage()
+        mode  = sys.argv[1]
+        query = sys.argv[2]
+        grep  = ""
+    else:
+        usage()
     
-    print("Looking (%s) for %s in format %s" % (sys.argv[1],sys.argv[2],sys.argv[3]))
-    client = IRCClient(sys.argv[2],sys.argv[3],sys.argv[1],True)
+    if mode == "SEARCH":
+        print("Looking for '%s' in format '%s'" % (query,grep))
+    if mode == "BOOK":
+        print("Downloading %s" % query)
+
+    client = IRCClient(query,grep,mode,logging=True)
