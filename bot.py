@@ -35,13 +35,15 @@ class IRCClient():
         self.LOGGING=logging
         self.PATH=path
 
-        self.NICK="bookbot"+self.random_hash()
-        self.IDENT="bookbot"+self.random_hash()
-        self.REALNAME="bookbot"+self.random_hash()
+        name="bookbot"+self.random_hash()
+        self.NICK=name
+        self.IDENT=name
+        self.REALNAME=name
 
         self.socket=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect( (self.HOST, self.PORT) )
         self.handle_connect()
+
         nickstr="NICK %s" % self.NICK
         userstr="USER %s %s bla :%s" % (self.IDENT, self.HOST, self.REALNAME)
 
@@ -141,7 +143,6 @@ class IRCClient():
         msg=msg.replace("\x01","")
         if not msg.startswith("DCC"):
             self.EXTRA_OUTPUT=msg;
-            print(msg)
             self.log(msg)
             return
 
@@ -222,7 +223,6 @@ class IRCClient():
     def send_queue(self,msg):
         add=bytes(str(msg),"utf-8")+bytes([13,10])
         self.socket.send(add)
-#        self.buffer.append(add)
 
     def book(self,book):
         self.log("DOWNLOADING  %s" % book)
@@ -243,10 +243,9 @@ class IRCClient():
             print(val)
 
 if __name__ == "__main__":
-    if len(sys.argv)!=3:
-        print("USAGE: %s <BOOK> <FORMAT>" % sys.argv[0])
+    if len(sys.argv)!=4:
+        print("USAGE: %s <SEARCH|BOOK> <BOOK> <FORMAT>" % sys.argv[0])
         sys.exit(1)
     
-    print("Looking for %s in format %s" % (sys.argv[1],sys.argv[2]))
-    client = IRCClient(sys.argv[1],sys.argv[2],"SEARCH",True)
-    #client = IRCClient(sys.argv[1],sys.argv[2],"BOOK",True)
+    print("Looking (%s) for %s in format %s" % (sys.argv[1],sys.argv[2],sys.argv[3]))
+    client = IRCClient(sys.argv[2],sys.argv[3],sys.argv[1],True)
