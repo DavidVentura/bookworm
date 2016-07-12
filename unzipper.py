@@ -37,7 +37,7 @@ def unrar(source, dest_dir):
     extract_files=[]
     if USE_UNRAR:
         list_files=["unrar","lb",source]
-        extract_files=["unrar","x",source,dest_dir]
+        extract_files=["unrar","x","-o+",source,dest_dir]
     else:
         list_files=["lsar",source]
         extract_files=["unar","-f","-o",dest_dir,source]
