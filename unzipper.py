@@ -9,6 +9,7 @@ USE_UNRAR = True
 def unar(source, dest_dir):
     """Split input into zip or rar and parse accordingly.
     Return source if it's not a zip or rar"""
+    print("uncompressing %s to %s" % (source, dest_dir))
     if source.lower().endswith("zip"):
         return unzip(source, dest_dir)
     if source.lower().endswith("rar"):
@@ -21,6 +22,7 @@ def unar(source, dest_dir):
 
 def unzip(source_filename, dest_dir):
     """Unzip source_filename to dest_dir"""
+    print("Unzipping %s to %s" % (source_filename, dest_dir))
     out = []
     with zipfile.ZipFile(source_filename) as zfile:
         for member in zfile.infolist():
@@ -34,13 +36,16 @@ def unzip(source_filename, dest_dir):
                 if word in (os.curdir, os.pardir, ''):
                     continue
                 path = os.path.join(path, word)
-            out.append(os.path.join(path, member.filename.split('/')[-1]))
+            target = os.path.join(path, member.filename.split('/')[-1])
+            out.append(target)
+            print("Extracted %s" % target)
             zfile.extract(member, path)
     return out
 
 
 def unrar(source, dest_dir):
     """Unzip source to dest_dir. Might use unar or unrar
+    print("Unraring %s to %s" % (source, dest_dir))
     based on the flag USE_UNRAR"""
     out = []
     list_files = []

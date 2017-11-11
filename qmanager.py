@@ -45,6 +45,12 @@ class qManager:
         self.last_id += 1
         self.tasks.append(nt)
 
+    def search_status(self):
+        return [ t for t in self.task_status() if t["TYPE"]=='SEARCH' ]
+
+    def books_status(self):
+        return [ t for t in self.task_status() if t["TYPE"]=='BOOK' ]
+
     def task_status(self):
         """ Return a dict with the status of each 'task' """
         ret = []

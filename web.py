@@ -4,6 +4,7 @@ import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from qmanager import qManager
 import urllib
+#import urllib.parse
 
 # Port on which server will run.
 PORT = 8080
@@ -15,8 +16,31 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
     q = qManager()
 
     def do_GET(self):
+        if self.path==BASE_PATH+"SEARCH":
+            self.send_200()
+            out=json.dumps(self.q.search_status())
+            self.wfile.write(bytes(out,"utf-8")) #fileHandle.read().encode()
+            return
+        if self.path==BASE_PATH+"list":
+            self.send_response(200)
+            mime="text/html"
+            self.send_header('Content-type', mime)
+            self.end_headers()
+            out = []
+            for book in self.q.books_status():
+                if 'OUT' not in book:
+                    continue
+                if len(book['OUT']) == 0:
+                    continue
+                out.append("<li><a href='%s'>%s</a>" % (urllib.parse.quote(book['OUT'][0]), book['QUERY']))
+            self.wfile.write(bytes("".join(out),"utf-8")) #fileHandle.read().encode()
+            return
+        if self.path==BASE_PATH+"RESULTS":
+            self.send_200()
+            out=json.dumps(self.q.books_status())
+            self.wfile.write(bytes(out,"utf-8")) #fileHandle.read().encode()
+            return
         if self.path==BASE_PATH:
-        #self.wfile.write(bytes()) #fileHandle.read().encode()
             self.send_200()
             out=json.dumps(self.q.task_status())
             self.wfile.write(bytes(out,"utf-8")) #fileHandle.read().encode()
@@ -24,7 +48,6 @@ class HTTPRequestHandler(BaseHTTPRequestHandler):
 
         p=urllib.parse.unquote(self.path.replace(BASE_PATH,""))
         path=FILE_PATH+p
-        print(path)
         #mime=mimetypes.guess_type(path) #fails on mobi, epub
         mime=""
         if p.endswith("mobi"):

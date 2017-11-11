@@ -2,13 +2,14 @@ app=angular.module('app', []);
 
 app.controller('main', function($scope,$http,$interval) {
 	var ROOT_PATH="/backend/";
-	$scope.list=[];
+	$scope.searchlist=[]
+	$scope.results = [];
 	$scope.book="";
 	$scope.extension="";
 
 	$scope.activeTab = 'SEARCH';
 	$scope.getList = function() {
-		$http.get(ROOT_PATH).then(
+		$http.get(ROOT_PATH+$scope.activeTab).then(
 		function(data) {
 			/*
 			data.data=data.data.map(function(el) {
@@ -17,7 +18,10 @@ app.controller('main', function($scope,$http,$interval) {
 				return el;
 			});
 			*/
-			$scope.list=data.data;
+			if($scope.activeTab === "SEARCH")
+				$scope.searchlist=data.data;
+			else
+				$scope.results=data.data;
 		},
 		function(data){
 			console.log("error");
@@ -64,7 +68,11 @@ app.controller('main', function($scope,$http,$interval) {
 	$scope.showMore = function(l){
 		$scope.limit[l.ID] = $scope.limit[l.ID] ? undefined : l.OUT.length;
 	}
-	$interval($scope.getList, 3500);
+
+	var promise =  $interval($scope.getList, 3500);
+	$scope.$on('destroy', function() {
+		$interval.cancel(promise);
+	});
 });
 
 app.directive('progressBar', function(){

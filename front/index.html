@@ -40,7 +40,7 @@
 								</tr>
 							</thead>
 							<tbody>
-								<tr ng-repeat="l in list | filter:{TYPE:'SEARCH'} track by l.ID" ng-class="{'expanded':limit!=undefined}">
+								<tr ng-repeat="l in searchlist | filter:{TYPE:'SEARCH'} track by l.ID" ng-class="{'expanded':limit!=undefined}">
 									<td><a ng-click="showMore(l)">{{limit[l.ID] ? '&#9650;' : '&#9660;'}}</a></td>
 									<td> <span>{{l.QUERY}}</span> </td>
 									<td> <label class="{{l.STATUS}}">{{l.STATUS}}</label> </td>
@@ -69,7 +69,7 @@
 								</tr>
 							</thead>
 							<tbody>
-								<tr ng-repeat="l in list | filter:{TYPE:'BOOK'} track by l.ID" class="expanded">
+								<tr ng-repeat="l in results| filter:{TYPE:'BOOK'} track by l.ID" class="expanded">
 									<td> <span>{{l.QUERY}}<span> </td>
 									<td> <label class="{{l.STATUS}}">{{l.STATUS}}</label> </td>
 									<td>
