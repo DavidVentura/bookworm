@@ -173,7 +173,7 @@ class IRCClient():
 
         out = []
         for f in files:
-            if "searchbot" in f.lower():
+            if "searchbot" in f.lower() or "searchook" in f.lower():
                 out.append(self.list_books(f))
 
         self.OUTPUT = []
