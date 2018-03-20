@@ -3,7 +3,7 @@ import zipfile
 import os.path
 import subprocess
 
-USE_UNRAR = True
+USE_UNRAR = False
 
 
 def unar(source, dest_dir):
@@ -38,8 +38,9 @@ def unzip(source_filename, dest_dir):
                 path = os.path.join(path, word)
             target = os.path.join(path, member.filename.split('/')[-1])
             out.append(target)
-            print("Extracted %s" % target)
+            print("Extracting %s" % target)
             zfile.extract(member, path)
+            print("Extracted %s" % target)
     return out
 
 
@@ -63,7 +64,6 @@ def unrar(source, dest_dir):
             del out[0]  # header
         if len(out[-1]) == 0:
             del out[-1]
-        # print(out)
     subprocess.run(extract_files, stdout=subprocess.DEVNULL)
 
     return [os.path.join(dest_dir, file) for file in out]

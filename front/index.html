@@ -4,6 +4,7 @@
 		<script src="js/angular.min.js"></script>
 		<script src="js/app.js"></script>
 		<link href="styles.css" rel="stylesheet" type="text/css"></link>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
 	</head>
 <body>
 	<div ng-controller="main">
@@ -35,7 +36,7 @@
 									<th></th>
 									<th>Query</th>
 									<th>Status</th>
-									<th>Elapsed</th>
+									<th class="nomobile">Elapsed</th>
 									<th class="output">Output</th>
 								</tr>
 							</thead>
@@ -44,7 +45,7 @@
 									<td><a ng-click="showMore(l)">{{limit[l.ID] ? '&#9650;' : '&#9660;'}}</a></td>
 									<td> <span>{{l.QUERY}}</span> </td>
 									<td> <label class="{{l.STATUS}}">{{l.STATUS}}</label> </td>
-									<td> <p ng-show="l.STATUS=='WAITING'|| l.STATUS=='DOWNLOADING'">{{l.ELAPSED}}</p> </td>
+									<td class="nomobile"> <p ng-show="l.STATUS=='WAITING'|| l.STATUS=='DOWNLOADING'">{{l.ELAPSED}}</p> </td>
 									<td>
 										<i ng-show="l.STATUS=='DISCONNECTED'">Found {{l.OUT.length}} matches:</i>
 										<ul>
@@ -64,7 +65,7 @@
 									<th>Title</th>
 									<th>Status</th>
 									<th>Progress</th>
-									<th>Elapsed</th>
+									<th class="nomobile">Elapsed</th>
 									<th>Output</th>
 								</tr>
 							</thead>
@@ -75,12 +76,11 @@
 									<td>
 									<progress-bar progress="l.PROGRESS"></progress-bar>
 									</td>
-									<td> <p ng-hide="l.STATUS=='DISCONNECTED'|| l.STATUS=='TIMED OUT'">{{l.ELAPSED}}</p> </td>
+									<td class="nomobile"> <p ng-hide="l.STATUS=='DISCONNECTED'|| l.STATUS=='TIMED OUT'">{{l.ELAPSED}}</p> </td>
 									<td>
-										<i>Found {{l.OUT.length}} file{{l.OUT.length == 1 ? '' : 's'}}:</i>
 										<ul>
 											<li ng-repeat="o in l.OUT">
-												<a ng-href="/backend/{{o}}" target="_blank">{{o}}  &#8675;</a>
+												<a ng-href="/backend/{{o}}" target="_blank">{{clean(o)}}  &#8675;</a>
 											</li>
 										</ul>
 									</td>

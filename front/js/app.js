@@ -8,52 +8,26 @@ app.controller('main', function($scope,$http,$interval) {
 	$scope.extension="";
 
 	$scope.activeTab = 'SEARCH';
-	$scope.getList = function() {
-		$http.get(ROOT_PATH+$scope.activeTab).then(
-		function(data) {
-			/*
-			data.data=data.data.map(function(el) {
-				if (el.STATUS!="DISCONNECTED")
-					el.STATUS=el.STATUS+" "+el.ELAPSED;
-				return el;
-			});
-			*/
-			if($scope.activeTab === "SEARCH")
-				$scope.searchlist=data.data;
-			else
-				$scope.results=data.data;
-		},
-		function(data){
-			console.log("error");
-
-		});
-	}
-	$scope.getList();
+    ws = new WebSocket("ws://192.168.1.12:8099/");
+    ws.onmessage = function(event) {
+        var j = JSON.parse(event.data);
+        console.log(j);
+        $scope.$apply(function() {
+            $scope.searchlist=j['SEARCH'];
+            $scope.results=j['BOOKS'];
+        });
+    };
 
 	$scope.download = function(book) {
-		$http.post(ROOT_PATH+"?adasasd",{"type":"BOOK","book":book}).then(
-		function(data) {
-			$scope.newElement(true);
-			$scope.getList();
-		},
-		function(data){
-			console.log("error");
-			console.log(data);
-		});
-	};
+		ws.send(JSON.stringify({"type":"BOOK","book":book}));
+    };
 
 	$scope.newElement = function(bool){
 		$scope.new = bool;
 	}
+
 	$scope.searchBook = function(book,extension){
-		$http.post(ROOT_PATH+"?ewqewqewq", {"type":"search","book":book,"extension":extension}).then(
-		function(data) {
-			console.log("success");
-			$scope.getList();
-		},
-		function(data){
-			console.log("err");
-		});
+		ws.send(JSON.stringify({"type":"search","book":book,"extension":extension}));
 	};
 
 	$scope.isActiveTab = function(tab){
@@ -68,11 +42,12 @@ app.controller('main', function($scope,$http,$interval) {
 	$scope.showMore = function(l){
 		$scope.limit[l.ID] = $scope.limit[l.ID] ? undefined : l.OUT.length;
 	}
-
-	var promise =  $interval($scope.getList, 3500);
-	$scope.$on('destroy', function() {
-		$interval.cancel(promise);
-	});
+    $scope.clean = function(s) {
+        s = s.replace(/\(.*?\)/g, '');
+        s.replace(/\s+/g, " ");
+        s.replace(/\s+\./g, ".");
+        return s;
+    }
 });
 
 app.directive('progressBar', function(){

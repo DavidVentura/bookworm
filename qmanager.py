@@ -15,9 +15,10 @@ class qManager:
     last_id = 0
     PATH = ""
 
-    def __init__(self, path="/tmp/"):
+    def __init__(self, update_cb, path="/tmp/"):
         """Init the manager. Set output path"""
         self.PATH = path
+        self.update_cb = update_cb
 
     def new_dl(self, string):
         """Download a book"""
@@ -25,6 +26,7 @@ class qManager:
             string,
             "",
             "BOOK",
+            cb=self.update_cb,
             logging=False,
             path=self.PATH)
         self.new_task(string, irc_client)
@@ -35,6 +37,7 @@ class qManager:
             keywords,
             fmt,
             "SEARCH",
+            cb=self.update_cb,
             logging=False,
             path=self.PATH)
         self.new_task(keywords, irc_client)

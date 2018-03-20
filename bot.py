@@ -3,6 +3,7 @@
 import random
 import threading
 import socket
+import subprocess
 import sys
 from unzipper import unar
 
@@ -42,7 +43,7 @@ class IRCClient():
     joined = False
     connected = False
 
-    def __init__(self, book, extension, t, logging=False, path="/tmp/"):
+    def __init__(self, book, extension, t, cb, logging=False, path="/tmp/"):
 
         self.TYPE = t
         self.EXTENSION = extension
@@ -54,6 +55,7 @@ class IRCClient():
         self.NICK = name
         self.IDENT = name
         self.REALNAME = name
+        self.callback = cb
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.HOST, self.PORT))
@@ -69,13 +71,13 @@ class IRCClient():
 
     def handle_connect(self):
         self.log("connected")
-        self.STATUS = "CONNECTED"
+        self.set_status("CONNECTED")
         self.connected = True
 
     def handle_close(self):
         self.NOT_EXITED = False
         self.log("closed")
-        self.STATUS = "DISCONNECTED"
+        self.set_status("DISCONNECTED")
         self.connected = False
         self.socket.close()
 
@@ -84,7 +86,7 @@ class IRCClient():
             return
         self.NOT_EXITED = False
         self.log("Abort mission")
-        self.STATUS = "TIMED OUT"
+        self.set_status("TIMED OUT")
         self.connected = False
         self.socket.close()
 
@@ -122,7 +124,7 @@ class IRCClient():
                 if comm == "JOIN":
                     if self.NICK not in msg_from:  # msg "NICK joined the channel" not about me
                         continue
-                    self.STATUS = "JOINED"
+                    self.set_status("JOINED")
                     self.log("Joined channel %s" % self.CHANNEL)
                     self.run_query()
                     self.joined = True
@@ -146,7 +148,7 @@ class IRCClient():
                     continue
 
     def run_query(self):
-        self.STATUS = "WAITING"
+        self.set_status("WAITING")
         if self.TYPE == "SEARCH":
             self.search(self.LOOKING_FOR)
             return
@@ -166,32 +168,49 @@ class IRCClient():
         port = int(args.pop())
         ip = ip_from_decimal(int(args.pop()))
         filename = "_".join(args).replace('"', '')
-        self.STATUS = "RECEIVING"
+        self.set_status("RECEIVING")
 
         n = self.netcat(ip, port, size, filename)
         files = unar(n, self.PATH)
+        print("Unarchived files", files)
 
         out = []
         for f in files:
             if "searchbot" in f.lower() or "searchook" in f.lower():
                 out.append(self.list_books(f))
 
+        print("Current output", out)
         self.OUTPUT = []
         if len(out) > 0:
             if isinstance(out[0], list):
+                print("1")
                 self.OUTPUT = [item for sublist in out for item in sublist]
             else:
+                print("2")
                 self.OUTPUT = out
+            print("3")
             self.OUTPUT = list(set(self.OUTPUT))
         else:
+            print("4")
             self.OUTPUT = files
+
+        print(self.OUTPUT)
 
         if self.TYPE == "BOOK":
             self.log("Files: ")
             self.log(self.OUTPUT)
+            for f in self.OUTPUT:
+                if f.lower().endswith(".epub"):
+                    print("EPUB %s" % f)
+                    new_fname = f.replace("epub", "mobi")
+                    p = subprocess.Popen(["ebook-convert", f, new_fname])
+                    p.wait()
+                    self.OUTPUT.append(new_fname)
+                    break
 
         self.OUTPUT = [i.replace(self.PATH, "") for i in self.OUTPUT]
         self.handle_close()
+        self.set_status("FINISHED")
 
     def list_books(self, f):
         f = open(f, "r")
@@ -217,8 +236,8 @@ class IRCClient():
             count += len(data)
             f.write(data)
             perc = int(100 * count / size)
-            self.STATUS = "DOWNLOADING"  # % perc #progress
             self.PROGRESS = perc
+            self.set_status("DOWNLOADING")  # % perc #progress
 
             self.log("\r%d%%" % perc, instant=True)
             if count >= size:
@@ -257,6 +276,10 @@ class IRCClient():
                 print(val)
             else:
                 sys.stdout.write(val)
+
+    def set_status(self, value):
+        self.STATUS = value
+        self.callback(value=="FINISHED")
 
 
 def ip_from_decimal(dec):

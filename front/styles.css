@@ -175,8 +175,8 @@ td > i {
 }
 
 td > ul > li {
-  margin-bottom: 5px;
-  margin-left: 10px;
+  padding-bottom: 5px;
+  padding-left: 10px;
 }
 
 td > ul > li:hover {
@@ -246,4 +246,20 @@ th.output{
 .CONNECTED{
   background-color: rgb(239, 199, 207);
   border-color: rgb(230, 190, 198);
+}
+.FINISHED{
+  background-color: rgb(200, 199, 207);
+  border-color: rgb(190, 190, 198);
+}
+@media only screen and (max-width: 600px) {
+    td, tr {
+      padding: 5px;
+    }
+    td > ul > li {
+        padding: 5px !important;
+        padding-left: 0px !important;
+    }
+    a { font-size: 0.9em; }
+    .tab-content{padding:10px}
+    .nomobile { display: none}
 }

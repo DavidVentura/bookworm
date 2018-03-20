@@ -1,129 +1,50 @@
 #!/usr/bin/env python3
 import os
 import json
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from datetime import datetime
+from websocket_server import WebsocketServer
 from qmanager import qManager
 import urllib
-#import urllib.parse
 
 # Port on which server will run.
 PORT = 8080
-BASE_PATH="/backend/" #changes based on webserver
-FILE_PATH="/tmp/"
+BASE_PATH='/backend/' #changes based on webserver
+FILE_PATH='/tmp/'
+last_msg = datetime.now()
 
-
-class HTTPRequestHandler(BaseHTTPRequestHandler):
-    q = qManager()
-
-    def do_GET(self):
-        if self.path==BASE_PATH+"SEARCH":
-            self.send_200()
-            out=json.dumps(self.q.search_status())
-            self.wfile.write(bytes(out,"utf-8")) #fileHandle.read().encode()
+def send_status(server, client=None, force=False):
+    global last_msg
+    if client is None and not force:
+        if (datetime.now() - last_msg).total_seconds() < 2:
             return
-        if self.path==BASE_PATH+"list":
-            self.send_response(200)
-            mime="text/html"
-            self.send_header('Content-type', mime)
-            self.end_headers()
-            out = []
-            for book in self.q.books_status():
-                if 'OUT' not in book:
-                    continue
-                if len(book['OUT']) == 0:
-                    continue
-                out.append("<li><a href='%s'>%s</a>" % (urllib.parse.quote(book['OUT'][0]), book['QUERY']))
-            self.wfile.write(bytes("".join(out),"utf-8")) #fileHandle.read().encode()
-            return
-        if self.path==BASE_PATH+"RESULTS":
-            self.send_200()
-            out=json.dumps(self.q.books_status())
-            self.wfile.write(bytes(out,"utf-8")) #fileHandle.read().encode()
-            return
-        if self.path==BASE_PATH:
-            self.send_200()
-            out=json.dumps(self.q.task_status())
-            self.wfile.write(bytes(out,"utf-8")) #fileHandle.read().encode()
-            return
+        last_msg = datetime.now()
+    status = { 'SEARCH': q.search_status(), 'BOOKS': q.books_status()}
+    if client is None:
+        ws.send_message_to_all(json.dumps(status))
+    else:
+        server.send_message(client, json.dumps(status))
 
-        p=urllib.parse.unquote(self.path.replace(BASE_PATH,""))
-        path=FILE_PATH+p
-        #mime=mimetypes.guess_type(path) #fails on mobi, epub
-        mime=""
-        if p.endswith("mobi"):
-            mime="application/x-mobipocket-ebook"
-        if p.endswith("epub"):
-            mime="application/epub+zip"
-        if p.endswith("pdf"):
-            mime="application/pdf"
-        if p.endswith("html"):
-            mime="text/html"
-        
-        self.send_response(200)
-        self.send_header('Content-type', mime)
-        self.send_header('Content-Disposition', 'attachment;filename="%s"'%p)
-        self.end_headers()
+def new_client(client, server):
+    send_status(server, client)
 
-        fp = open(path,'rb')
-        while True:
-            b = fp.read(8192)
-            if b:
-                self.wfile.write(b) #fileHandle.read().encode()
-            else:
-                break
+def message_received(client, server, message):
+    j = json.loads(message)
+    print(j)
+    if j['type'].upper() == 'SEARCH':
+        q.new_search(j['book'], j['extension'])
 
-    def send_400(self):
-        self.send_response(400, 'NOT OK')
-        self.send_header('Content-type', 'text/json')
-        self.end_headers()
+    if j['type'].upper() == 'BOOK':
+        q.new_dl(j['book'])
 
-    def send_200(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/json')
-        self.end_headers()
+    send_status(server)
 
-    def do_POST(self):
-        # Check if path is there.
-        if self.path:
-            length = self.headers['content-length']
-            if length is None:
-               self.send_400()
-               return
-
-
-            data = self.rfile.read(int(length))
-            data = data.decode("utf-8")
-            try:
-                d=json.loads(data)
-            except:
-                print("no json")
-                self.send_400()
-                return
-
-            if not "type" in d or not "book" in d:
-                self.send_400()
-                return
-            if d["type"].upper()=="SEARCH":
-                self.q.new_search(d["book"],d["extension"])
-                self.send_200()
-                return
-
-            if d["type"]=="BOOK":
-                self.q.new_dl(d["book"])
-                self.send_200()
-                return
+def updated(force=False):
+    send_status(ws, force=force)
 
 
 if __name__ == '__main__':
-
-    HTTPDeamon = HTTPServer(('', PORT), HTTPRequestHandler)
-
-    print("Listening at port", PORT)
-
-    try:
-        HTTPDeamon.serve_forever()
-    except KeyboardInterrupt:
-        pass
-
-    HTTPDeamon.server_close()
-    print("Server stopped")
+    q = qManager(updated)
+    ws = WebsocketServer(8081, host='127.0.0.1')
+    ws.set_fn_new_client(new_client)
+    ws.set_fn_message_received(message_received)
+    ws.run_forever()
