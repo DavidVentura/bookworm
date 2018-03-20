@@ -9,7 +9,6 @@ import urllib
 # Port on which server will run.
 PORT = 8080
 BASE_PATH='/backend/' #changes based on webserver
-FILE_PATH='/tmp/'
 last_msg = datetime.now()
 
 def send_status(server, client=None, force=False):

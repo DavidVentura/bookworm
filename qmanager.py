@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Manage a list of book-jobs,
 return a description list for the website"""
-
+import os
 import shlex
 import re
 from time import time
@@ -15,8 +15,10 @@ class qManager:
     last_id = 0
     PATH = ""
 
-    def __init__(self, update_cb, path="/tmp/"):
+    def __init__(self, update_cb, path="/tmp/books/"):
         """Init the manager. Set output path"""
+        if not os.path.isdir(path):
+            os.makedirs(path, exist_ok=True)
         self.PATH = path
         self.update_cb = update_cb
 
