@@ -8,7 +8,7 @@ app.controller('main', function($scope,$http,$interval) {
 	$scope.extension="";
 
 	$scope.activeTab = 'SEARCH';
-    ws = new WebSocket("ws://192.168.1.12:8099/");
+    ws = new WebSocket("ws://192.168.2.12:8099/");
     ws.onmessage = function(event) {
         var j = JSON.parse(event.data);
         console.log(j);
