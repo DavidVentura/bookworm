@@ -25,9 +25,7 @@ class qManager:
     def new_dl(self, string):
         """Download a book"""
         irc_client = IRCClient(
-            string,
-            "",
-            "BOOK",
+            string, "", "BOOK",
             cb=self.update_cb,
             logging=False,
             path=self.PATH)
