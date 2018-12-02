@@ -5,6 +5,7 @@ import threading
 import socket
 import subprocess
 import sys
+import time
 from unzipper import unar
 
 
@@ -103,6 +104,7 @@ class IRCClient():
                 continue
 
             data = self.readbuffer + data
+            print("DATA", data)
 
             # purge mojibake
             data = (data.replace(b'\x95', b'')
@@ -126,6 +128,8 @@ class IRCClient():
                         continue
                     self.set_status("JOINED")
                     self.log("Joined channel %s" % self.CHANNEL)
+                    self.log("Waiting 30s")
+                    time.sleep(31)
                     self.run_query()
                     self.joined = True
                     continue
@@ -250,7 +254,7 @@ class IRCClient():
 
     def search(self, book):
         self.log("searching for %s" % book)
-        self.send_queue("PRIVMSG %s :@search %s " % (self.CHANNEL, book))
+        self.send_queue("PRIVMSG %s :@searchook %s " % (self.CHANNEL, book))
 
     def pong(self, data):
         msg = data.replace("PING ", "")
@@ -320,4 +324,4 @@ if __name__ == "__main__":
     if mode == "BOOK":
         print("Downloading %s" % query)
 
-    client = IRCClient(query, grep, mode, logging=True)
+    client = IRCClient(query, grep, mode, print, logging=True)

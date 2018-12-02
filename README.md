@@ -37,6 +37,10 @@ closed
 
 Note: Most likely you'll have to escape '!' on your shell.
 
+requirements.txt
+```
+websocket_server
+```
 
 # Basic Web interface
 Work in progress
