@@ -6,6 +6,7 @@ import queue
 import socket
 import subprocess
 import time
+import utils
 
 from unzipper import unar
 from threading import Thread
@@ -108,28 +109,24 @@ class IRCClient(Thread):
         self.connected = False
         self.socket.close()
 
-    def handle_read(self):
-        try:
-            data = self.socket.recv(4096)
-        except socket.error as e:
-            raise
-        except Exception as e:
-            raise
-
+    def get_data_from_irc(self):
+        data = self.socket.recv(4096)
         if len(data) < 2:
-            return
+            return ""
         # newline at the end?
         if not (data[-1] == 10 and data[-2] == 13):
             self.readbuffer += data
-            return
+            return ""
 
         data = self.readbuffer + data
         self.readbuffer = b''
 
         # purge crap
         data = (data.replace(b'\x95', b'').replace(b'0xc2', b'').decode('utf-8', 'ignore'))
+        return data
 
-        lines = data.splitlines()
+    def handle_read(self):
+        lines = self.get_data_from_irc().splitlines()
 
         for line in lines:
             words = line.split(' ')
@@ -141,6 +138,7 @@ class IRCClient(Thread):
             if self.joined_channel:
                 # log.debug(line)
                 pass
+
             if comm in self.IGNORE:
                 continue
 
@@ -157,38 +155,39 @@ class IRCClient(Thread):
                 # private message not addressed to me
                 if words[2] != self.name:
                     continue
-                self.parse_msg(line)
+                log.info("privmsg: %s", line)
+                dcc_args = self.get_dcc_args(line)
+                if dcc_args is None:
+                    continue
+                ip, port, size, filename = dcc_args
+                downloaded_filename = self.netcat(ip, port, size, filename)
+                # TODO save state in redis on ip port size filename + output of handle files
+                files = unar(downloaded_filename, self.PATH)
+                self.handle_files(files)
 
             if comm == "PING" or msg_from == "PING":  # respond ping to avoid getting kicked
                 self.pong(line)
                 continue
+
             if comm == "376":  # END MOTD
                 # MOTD complete, lets join the channel
                 self.join_channel(self.CHANNEL)
                 continue
 
-    def handle_dcc(self, msg):
+    def get_dcc_args(self, msg):
         msg = msg.split(':')[2]
         msg = msg.replace("\x01", "")
-        log.info('msg %s', msg)
         if not msg.startswith("DCC"):
-            return
-
+            return None
         args = msg.replace("DCC SEND ", "").split(" ")
         size = int(args.pop())
         port = int(args.pop())
         ip = utils.ip_from_decimal(int(args.pop()))
         filename = "_".join(args).replace('"', '')
-        self.set_status("RECEIVING")
-        return self.netcat(ip, port, size, filename)
+        return ip, port, size, filename
 
-    # FIXME rename
-    def parse_msg(self, msg):
-        log.info('complete msg %s', msg)
-        downloaded_filename = self.handle_dcc(msg)
-        files = unar(downloaded_filename, self.PATH)
+    def handle_files(self, files):
         log.info("Unarchived files %s", files)
-
         list_of_books = False
         out = []
         for f in files:
@@ -271,5 +270,3 @@ class IRCClient(Thread):
 
     def set_status(self, value):
         self.STATUS = value
-
-
