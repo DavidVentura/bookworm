@@ -1,3 +1,4 @@
+#!/usr/bin/env python3.7
 import queue
 import shlex
 import sys
@@ -16,7 +17,11 @@ def main():
 
     for line in sys.stdin:
         line = line.strip().lower()
-        split = shlex.split(line)
+        try:
+            split = shlex.split(line)
+        except Exception as e:
+            print(e)
+            continue
 
         if len(split) < 2 or len(split) > 3 or split[0].lower() not in [MODE_SEARCH, MODE_BOOK]:
             usage()
