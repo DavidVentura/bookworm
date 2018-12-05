@@ -29,10 +29,16 @@ def get_books_from_list(filename):
     ret = list(set(ret)) # dedup
     return ret
 
-
-def handle_files(files, mode):
+def mode_from_files(files):
+    for f in files:
+        f = f.lower()
+        if 'searchbot' in f or 'searchook' in f.lower():
+            return MODE_SEARCH
+    return MODE_BOOK
+def handle_files(files):
     log.info("Unarchived files %s", files)
     out = []
+    mode = mode_from_files(files)
     if mode == MODE_SEARCH:
         for f in files:
             if "searchbot" not in f.lower() and "searchook" not in f.lower():
@@ -59,7 +65,7 @@ def handle_results(q):
         item = q.get()
         log.info("Got a result! %s", item)
         if item['type'] == 'files':
-            handle_files(item['files'], item['mode'])
+            handle_files(item['files'])
 def main():
     q = queue.Queue()
     rq = queue.Queue()

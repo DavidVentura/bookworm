@@ -103,7 +103,6 @@ class IRCClient(Thread):
             return
         command = self.command_queue.get()
         log.info("command %s", command)
-        self.mode = command['mode']
 
         if command['mode'] == MODE_SEARCH:
             self.send_queue.put("PRIVMSG %s :@searchook %s " % (self.CHANNEL, command['query']))
@@ -178,7 +177,7 @@ class IRCClient(Thread):
                 downloaded_filename = self.netcat(ip, port, size, filename)
                 # TODO save state in redis on ip port size filename + output of handle files
                 files = unar(downloaded_filename, self.PATH)
-                self.results_queue.put({'type': 'files', 'files': files, 'mode': self.mode})
+                self.results_queue.put({'type': 'files', 'files': files})
 
             if comm == "PING" or msg_from == "PING":  # respond ping to avoid getting kicked
                 self.pong(line)
@@ -199,6 +198,7 @@ class IRCClient(Thread):
         fname = os.path.join(self.PATH, filename)
         f = open(fname, 'wb')
         count = 0
+        last_perc = 0
         while True:
             data = s.recv(16384)
             if len(data) == 0:
@@ -208,8 +208,9 @@ class IRCClient(Thread):
             f.write(data)
             perc = int(100 * count / size)
             self.set_status("DOWNLOADING")  # % perc #progress
-            if perc % 10 == 0:
+            if perc % 10 == 0 and perc != last_perc:
                 log.info("Download percentage: %d", perc)
+                last_perc = perc
             if count >= size:
                 break
         s.close()
