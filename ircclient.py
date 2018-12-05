@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-
 import logging
 import os
 import queue
 import socket
-import subprocess
 import time
 import utils
 
@@ -17,6 +15,19 @@ log.setLevel(logging.DEBUG)
 
 MODE_SEARCH = 'search'
 MODE_BOOK = 'book'
+
+def get_dcc_args(msg):
+    msg = msg.split(':')[2]
+    msg = msg.replace("\x01", "")
+    if not msg.startswith("DCC"):
+        return None
+    args = msg.replace("DCC SEND ", "").split(" ")
+    size = int(args.pop())
+    port = int(args.pop())
+    ip = utils.ip_from_decimal(int(args.pop()))
+    filename = "_".join(args).replace('"', '')
+    return ip, port, size, filename
+
 
 class IRCClient(Thread):
     TIME_TO_FIRST_COMMAND = 30
@@ -40,15 +51,18 @@ class IRCClient(Thread):
         "396"]
     CHANNEL = "#ebooks"
     PATH = "/tmp/"
+    STATUS = 'disconnected'
     joined_channel = False
     connected = False
     name = "bookbot" + utils.random_hash()
     readbuffer = b''
     time_joined = None
 
-    def __init__(self, q):
+    def __init__(self, command_queue, results_queue):
         super(IRCClient, self).__init__(daemon=True)
-        self.command_queue = q
+        self.socket = None
+        self.command_queue = command_queue
+        self.results_queue = results_queue
         self.send_queue = queue.Queue()
 
         nickstr = "NICK %s" % self.name
@@ -89,9 +103,10 @@ class IRCClient(Thread):
             return
         command = self.command_queue.get()
         log.info("command %s", command)
+        self.mode = command['mode']
+
         if command['mode'] == MODE_SEARCH:
             self.send_queue.put("PRIVMSG %s :@searchook %s " % (self.CHANNEL, command['query']))
-            self.EXTENSION = command['grep'] # FIXME 
             return
         self.send_queue.put("PRIVMSG %s :%s " % (self.CHANNEL, command['query']))
 
@@ -146,7 +161,7 @@ class IRCClient(Thread):
                 if self.name not in msg_from:  # msg "NICK joined the channel" not about me
                     continue
                 self.set_status("JOINED")
-                log.info("Joined channel %s" % self.CHANNEL)
+                log.info("Joined channel %s", self.CHANNEL)
                 self.time_joined = time.time()
                 self.joined_channel = True
                 continue
@@ -156,14 +171,14 @@ class IRCClient(Thread):
                 if words[2] != self.name:
                     continue
                 log.info("privmsg: %s", line)
-                dcc_args = self.get_dcc_args(line)
+                dcc_args = get_dcc_args(line)
                 if dcc_args is None:
                     continue
                 ip, port, size, filename = dcc_args
                 downloaded_filename = self.netcat(ip, port, size, filename)
                 # TODO save state in redis on ip port size filename + output of handle files
                 files = unar(downloaded_filename, self.PATH)
-                self.handle_files(files)
+                self.results_queue.put({'type': 'files', 'files': files, 'mode': self.mode})
 
             if comm == "PING" or msg_from == "PING":  # respond ping to avoid getting kicked
                 self.pong(line)
@@ -173,57 +188,6 @@ class IRCClient(Thread):
                 # MOTD complete, lets join the channel
                 self.join_channel(self.CHANNEL)
                 continue
-
-    def get_dcc_args(self, msg):
-        msg = msg.split(':')[2]
-        msg = msg.replace("\x01", "")
-        if not msg.startswith("DCC"):
-            return None
-        args = msg.replace("DCC SEND ", "").split(" ")
-        size = int(args.pop())
-        port = int(args.pop())
-        ip = utils.ip_from_decimal(int(args.pop()))
-        filename = "_".join(args).replace('"', '')
-        return ip, port, size, filename
-
-    def handle_files(self, files):
-        log.info("Unarchived files %s", files)
-        list_of_books = False
-        out = []
-        for f in files:
-            if "searchbot" in f.lower() or "searchook" in f.lower():
-                list_of_books = True
-                out.extend(self.list_books(f))
-
-        if list_of_books:
-            log.info("Final output %s", out)
-            return
-
-        log.info("Files: %s", files)
-        ret = []
-        for f in files:
-            if f.lower().endswith(".epub"):
-                log.info("EPUB %s" % f)
-                new_fname = f.replace("epub", "mobi")
-                p = subprocess.Popen(["ebook-convert", f, new_fname])
-                p.wait()
-                ret.append(new_fname)
-            ret.append(f)
-        # make paths absolute?
-        ret = [i.replace(self.PATH, "") for i in ret]
-        for filename in ret:
-            log.info(filename)
-
-    def list_books(self, f):
-        f = open(f, "r")
-        lines = f.readlines()
-        ret = []
-        for l in lines:
-            if self.EXTENSION in l.lower() and l.startswith('!') and "htm" not in l.lower():
-                ret.append(l.strip())
-                log.info("Book matches: %s", l.strip())
-        ret = list(set(ret)) # dedup
-        return ret
 
     def netcat(self, ip, port, size, filename):
         filename = os.path.basename(filename).replace(" ", "_")
@@ -243,10 +207,9 @@ class IRCClient(Thread):
             count += len(data)
             f.write(data)
             perc = int(100 * count / size)
-            self.PROGRESS = perc
             self.set_status("DOWNLOADING")  # % perc #progress
-
-            log.info("Download percentage: %d", perc)
+            if perc % 10 == 0:
+                log.info("Download percentage: %d", perc)
             if count >= size:
                 break
         s.close()
