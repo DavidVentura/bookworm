@@ -33,6 +33,10 @@ class IRCClient(Thread):
     TIME_TO_FIRST_COMMAND = 30
     HOST = "irc.irchighway.net"
     PORT = 6667
+    CHANNEL = "#ebooks"
+    PATH = "/tmp/"
+    SEARCH_BOT = "searchook"
+    # ^ config
     IGNORE = [
         "NOTICE",
         "PART",
@@ -49,8 +53,6 @@ class IRCClient(Thread):
         "265",
         "266",
         "396"]
-    CHANNEL = "#ebooks"
-    PATH = "/tmp/"
     STATUS = 'disconnected'
     joined_channel = False
     connected = False
@@ -105,7 +107,7 @@ class IRCClient(Thread):
         log.info("command %s", command)
 
         if command['mode'] == MODE_SEARCH:
-            self.send_queue.put("PRIVMSG %s :@searchook %s " % (self.CHANNEL, command['query']))
+            self.send_queue.put("PRIVMSG %s :@%s %s " % (self.CHANNEL, self.SEARCH_BOT, command['query']))
             return
         self.send_queue.put("PRIVMSG %s :%s " % (self.CHANNEL, command['query']))
 
