@@ -80,6 +80,7 @@ class IRCClient(Thread):
     readbuffer = b''
     time_joined = None
     jobs = defaultdict(dict)
+    busy = False
 
     def __init__(self, command_queue, results_queue):
         super(IRCClient, self).__init__(daemon=True)
@@ -137,6 +138,7 @@ class IRCClient(Thread):
     def set_job_state(self, job, state):
         log.info("Setting job [%s] to %s", job, state)
         self.jobs[job].update({'state': state})
+        self.results_queue.put({'type': 'status', 'status': state, 'key': job})
         log.info(self.jobs)
 
     def handle_connect(self):
@@ -203,10 +205,12 @@ class IRCClient(Thread):
                 ip, port, size, filename = dcc_args
                 job = filename_to_job(filename)
                 self.set_job_state(job, 'downloading')
+                self.busy = True
                 downloaded_filename = self.netcat(ip, port, size, filename)
                 self.set_job_state(job, 'unarchiving')
                 # TODO save state in redis on ip port size filename + output of handle files
                 files = unar(downloaded_filename, self.PATH)
+                self.busy = False
                 self.set_job_state(job, 'done')
                 self.results_queue.put({'type': 'files', 'files': files})
 
@@ -219,7 +223,7 @@ class IRCClient(Thread):
                 self.join_channel(self.CHANNEL)
                 continue
 
-    def netcat(self, ip, port, size, filename):
+    def netcat(self, ip, port, size, filename, job_key):
         filename = os.path.basename(filename).replace(" ", "_")
         log.info('netcat: %s %d %d %s', ip, port, size, filename)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -240,6 +244,7 @@ class IRCClient(Thread):
             perc = int(100 * count / size)
             if perc % 10 == 0 and perc != last_perc:
                 log.info("Download percentage: %d", perc)
+                self.set_job_state(job_key, "%d%%" % perc)
                 last_perc = perc
             if count >= size:
                 break
@@ -258,6 +263,7 @@ class IRCClient(Thread):
         if self.send_queue.empty():
             return
         data = self.send_queue.get()
-        log.info("Sending %s", data)
+        if not data.startswith("PONG"):
+            log.info("Sending %s", data)
         add = bytes(str(data), "utf-8") + bytes([13, 10])
         self.socket.send(add)
