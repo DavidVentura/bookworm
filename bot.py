@@ -35,6 +35,7 @@ def mode_from_files(files):
         if 'searchbot' in f or 'searchook' in f.lower():
             return MODE_SEARCH
     return MODE_BOOK
+
 def handle_files(files):
     log.info("Unarchived files %s", files)
     out = []
@@ -59,13 +60,15 @@ def handle_files(files):
     for filename in out:
         log.info(filename)
 
-
 def handle_results(q):
     while True:
         item = q.get()
         log.info("Got a result! %s", item)
-        if item['type'] == 'files':
+        if item['type'] == 'status':
+            print(item['key'], item['status'])
+        elif item['type'] == 'files':
             handle_files(item['files'])
+
 def main():
     q = queue.Queue()
     rq = queue.Queue()
