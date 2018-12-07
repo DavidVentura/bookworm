@@ -72,8 +72,11 @@ def handle_results(q):
 def main():
     q = queue.Queue()
     rq = queue.Queue()
-    client = IRCClient(command_queue=q, results_queue=rq)
-    client.start()
+
+    workers = []
+    worker = IRCClient(command_queue=q, results_queue=rq)
+    worker.start()
+    workers.append(worker)
 
     results_t = Thread(target=handle_results, args=(rq,))
     results_t.daemon = True
@@ -85,17 +88,27 @@ def main():
         except Exception as e:
             print(e)
             continue
+        if len(split) == 0:
+            continue
 
         if split[0].lower() not in [MODE_SEARCH, MODE_BOOK]:
             usage()
             continue
 
+        if not any([ worker.free for worker in workers]):
+            print("Spawning a new worker as all are busy...")
+            worker = IRCClient(command_queue=q, results_queue=rq)
+            worker.start()
+            workers.append(worker)
+
         mode = split[0]
         query = " ".join(split[1:])
         data = {'query': query, 'mode': mode}
         q.put(data)
-    client.join()
+
     results_t.join()
+    for worker in workers:
+        worker.join()
 
 if __name__ == "__main__":
     try:
