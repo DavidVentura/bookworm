@@ -5,9 +5,11 @@ import queue
 import socket
 import time
 import utils
+import re
 
 from unzipper import unar
 from threading import Thread
+from collections import defaultdict
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
@@ -15,6 +17,25 @@ log.setLevel(logging.DEBUG)
 
 MODE_SEARCH = 'search'
 MODE_BOOK = 'book'
+results_key = re.compile(r'_results_for[_ ]+(?P<key>.*?)\.', re.I)
+
+def query_to_job_key(query):
+    job = query
+    if job.startswith('!'):
+        # !Ook Brandon Sanderson - [Skyward 01] - Skyward (retail) (epub).rar  ::INFO:: 3.5MB
+        # !Horla-new Brandon Sanderson - Skyward (US) (epub).epub
+        job = ' '.join(job.split(' ')[1:]).strip()
+        # Brandon Sanderson - [Skyward 01] - Skyward (retail) (epub).rar  ::INFO:: 3.5MB
+        # Brandon Sanderson - Skyward (US) (epub).epub
+        job = re.sub(r'::.*$', '', job).strip()
+    return job.lower()
+
+def filename_to_job(fname):
+    match = results_key.search(fname)
+    if match: # list of results
+        return match.group('key').replace('_', ' ').lower()
+    # brandon_sanderson_-_skyward_(uk)_(epub).rar
+    return fname.replace('_', ' ').lower()
 
 def get_dcc_args(msg):
     msg = msg.split(':')[2]
@@ -53,12 +74,12 @@ class IRCClient(Thread):
         "265",
         "266",
         "396"]
-    STATUS = 'disconnected'
     joined_channel = False
     connected = False
     name = "bookbot" + utils.random_hash()
     readbuffer = b''
     time_joined = None
+    jobs = defaultdict(dict)
 
     def __init__(self, command_queue, results_queue):
         super(IRCClient, self).__init__(daemon=True)
@@ -105,23 +126,28 @@ class IRCClient(Thread):
             return
         command = self.command_queue.get()
         log.info("command %s", command)
+        job = query_to_job_key(command['query'])
+        self.set_job_state(job, 'pending')
 
         if command['mode'] == MODE_SEARCH:
             self.send_queue.put("PRIVMSG %s :@%s %s " % (self.CHANNEL, self.SEARCH_BOT, command['query']))
             return
         self.send_queue.put("PRIVMSG %s :%s " % (self.CHANNEL, command['query']))
 
+    def set_job_state(self, job, state):
+        log.info("Setting job [%s] to %s", job, state)
+        self.jobs[job].update({'state': state})
+        log.info(self.jobs)
+
     def handle_connect(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((self.HOST, self.PORT))
         self.socket.settimeout(2)
         log.info("connected")
-        self.set_status("CONNECTED")
         self.connected = True
 
     def handle_close(self):
         log.info("closed")
-        self.set_status("DISCONNECTED")
         self.connected = False
         self.socket.close()
 
@@ -161,7 +187,6 @@ class IRCClient(Thread):
             if comm == "JOIN":
                 if self.name not in msg_from:  # msg "NICK joined the channel" not about me
                     continue
-                self.set_status("JOINED")
                 log.info("Joined channel %s", self.CHANNEL)
                 self.time_joined = time.time()
                 self.joined_channel = True
@@ -176,9 +201,13 @@ class IRCClient(Thread):
                 if dcc_args is None:
                     continue
                 ip, port, size, filename = dcc_args
+                job = filename_to_job(filename)
+                self.set_job_state(job, 'downloading')
                 downloaded_filename = self.netcat(ip, port, size, filename)
+                self.set_job_state(job, 'unarchiving')
                 # TODO save state in redis on ip port size filename + output of handle files
                 files = unar(downloaded_filename, self.PATH)
+                self.set_job_state(job, 'done')
                 self.results_queue.put({'type': 'files', 'files': files})
 
             if comm == "PING" or msg_from == "PING":  # respond ping to avoid getting kicked
@@ -209,7 +238,6 @@ class IRCClient(Thread):
             count += len(data)
             f.write(data)
             perc = int(100 * count / size)
-            self.set_status("DOWNLOADING")  # % perc #progress
             if perc % 10 == 0 and perc != last_perc:
                 log.info("Download percentage: %d", perc)
                 last_perc = perc
@@ -233,6 +261,3 @@ class IRCClient(Thread):
         log.info("Sending %s", data)
         add = bytes(str(data), "utf-8") + bytes([13, 10])
         self.socket.send(add)
-
-    def set_status(self, value):
-        self.STATUS = value
