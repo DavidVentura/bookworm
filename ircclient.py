@@ -139,7 +139,8 @@ class IRCClient(Thread):
         log.info("Setting job [%s] to %s", job, state)
         self.jobs[job].update({'state': state})
         self.results_queue.put({'type': 'status', 'status': state, 'key': job})
-        log.info(self.jobs)
+        if state == 'done':
+            del self.jobs[job]
 
     def handle_connect(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -206,13 +207,13 @@ class IRCClient(Thread):
                 job = filename_to_job(filename)
                 self.set_job_state(job, 'downloading')
                 self.busy = True
-                downloaded_filename = self.netcat(ip, port, size, filename)
+                downloaded_filename = self.netcat(ip, port, size, filename, job)
                 self.set_job_state(job, 'unarchiving')
                 # TODO save state in redis on ip port size filename + output of handle files
                 files = unar(downloaded_filename, self.PATH)
                 self.busy = False
-                self.set_job_state(job, 'done')
                 self.results_queue.put({'type': 'files', 'files': files})
+                self.set_job_state(job, 'done')
 
             if comm == "PING" or msg_from == "PING":  # respond ping to avoid getting kicked
                 self.pong(line)
