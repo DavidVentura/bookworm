@@ -98,7 +98,7 @@ def main():
             usage()
             continue
 
-        if not any([ not worker.busy for worker in workers]):
+        if all([ worker.busy for worker in workers]):
             print("Spawning a new worker as all are busy...")
             worker = IRCClient(command_queue=q, results_queue=rq)
             worker.start()
