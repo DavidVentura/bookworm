@@ -64,6 +64,8 @@ In charge of taking a file (as provided from IRC), unpacking it and, if necessar
 The kindle has a very basic webbrowser (I believe it renders up to HTML4, CSS2.1), which can be used to download (available) books directly.  
 At the moment I re-route at nginx based on user agent
 
+To test, you can use `dillo` which has a set of features similar to the kindle's web browser.
+
 ```
 if ($http_user_agent ~* "armv7l") {
     rewrite ^/(.*)$ /books/kindle;
