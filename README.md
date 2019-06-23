@@ -1,13 +1,27 @@
-# CLI
-
-To be re-implemented
-
 # Requirements
 
 * S3 (minio can be used for a local instance).
 * Redis
 * Postgresql
 * Python3.6
+
+# Batch process
+
+To remove the initial roundtrip when looking for books, I keep a cache in postgres.  
+To populate this cache, I triggered each of the bot's `LIST` command, at `#ebooks`
+
+I executed:
+
+```
+@pondering42
+@dv8
+@shytot
+@dragnbreaker
+@Xon-new
+```
+
+Then fetched all of the files, unarchived and concatenated them together.
+On the resulting file I ran `parse.py` which inserts it into postgres.
 
 # Services
 
@@ -55,3 +69,7 @@ if ($http_user_agent ~* "armv7l") {
     rewrite ^/(.*)$ /books/kindle;
 }
 ```
+
+# CLI
+To be re-implemented
+
