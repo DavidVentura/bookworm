@@ -2,19 +2,56 @@
 
 To be re-implemented
 
-# Basic Web interface
-Work in progress
-##Screenshots
+# Requirements
 
-Waiting for a list of books that match the query
-![1](/screenshots/1.png?raw=true)
+* S3 (minio can be used for a local instance).
+* Redis
+* Postgresql
+* Python3.6
 
-Selecting a book from the list
-![2](/screenshots/2.png?raw=true)
+# Services
 
-Waiting for the book to download ( to the server )
-![3](/screenshots/3.png?raw=true)
+## Installation
 
-Downloading the book
-![4](/screenshots/4.png?raw=true)
+```
+sudo cp services/bookworm@.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl start bookworm@ircclient.service
+sudo systemctl start bookworm@file_fetcher.service
+sudo systemctl start bookworm@unpacker.service
+sudo systemctl start bookworm@web.service
+```
 
+## IRC Client
+In charge of processing received commands and sending them via IRC.  
+Will forward details from DCC to the file fetcher via redis.
+
+## File fetcher
+In charge of fetching files specified via DCC.  
+Will store the file in S3 and notify file details to the unpacker.
+
+## Unpacker
+In charge of taking a file (as provided from IRC), unpacking it and, if necessary, converting it to `mobi`.
+
+## Web
+
+### API
+
+* Lists jobs in progress (`/books/status`)
+* Serves available books (Anything in the S3 bucket)
+* Exposes a search endpont `/book/search?terms=...`
+* Fetches books via `/book/fetch/`
+
+
+### Web interface
+--
+
+### Basic (Kindle) Web interface
+The kindle has a very basic webbrowser (I believe it renders up to HTML4, CSS2.1), which can be used to download (available) books directly.  
+At the moment I re-route at nginx based on user agent
+
+```
+if ($http_user_agent ~* "armv7l") {
+    rewrite ^/(.*)$ /books/kindle;
+}
+```
