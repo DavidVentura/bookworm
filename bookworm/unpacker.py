@@ -8,7 +8,7 @@ from threading import Thread
 from subprocess import check_output
 from bookworm import s3
 from bookworm.logger import log, setup_logger
-from bookworm.constants import RAW_FILE_BUCKET, PROCESSED_FILE_BUCKET, UNPACKABLE_EXTENSIONS, REDIS_UNPACK_FILE
+from bookworm.constants import RAW_FILE_BUCKET, PROCESSED_FILE_BUCKET, UNPACKABLE_EXTENSIONS, REDIS_UNPACK_FILE, REDIS_STATE_KEY, REDIS_STEP_KEY
 import redis
 
 def should_unpack(fname):
@@ -41,17 +41,20 @@ def store_file(s3client, fname, file_contents):
     s3client.put_object(Body=file_contents, Bucket=PROCESSED_FILE_BUCKET, Key=fname)
     log.info('Put in s3 under bucket %s with key %s', PROCESSED_FILE_BUCKET, fname)
 
-def delete_raw_file(s3client, job_key):
-    log.info('Deleting %s from %s', job_key, RAW_FILE_BUCKET)
-    s3client.delete_object(Bucket=RAW_FILE_BUCKET, Key=job_key)
+def delete_raw_file(s3client, s3key):
+    log.info('Deleting %s from %s', s3key, RAW_FILE_BUCKET)
+    s3client.delete_object(Bucket=RAW_FILE_BUCKET, Key=s3key)
 
-def unpack_and_convert(job_key, s3client, redis):
-    unpacked_files = unpack(job_key, s3client, redis)
-    # TODO set_job_state(job_key, 'UNPACK_DONE', job_key)
+def unpack_and_convert(job_key, s3key, s3client, redis):
+    redis.hset(job_key, REDIS_STEP_KEY, 'UNPACKING')
+    unpacked_files = unpack(s3key, s3client, redis)
+    redis.hset(job_key, REDIS_STEP_KEY, 'UNPACK_DONE')
     log.info('Done unpacking job %s', job_key)
 
     for fname, data in unpacked_files:
         if not fname.lower().endswith('mobi'):
+            redis.hset(job_key, REDIS_STEP_KEY, 'CONVERTING')
+            redis.hset(job_key, REDIS_STATE_KEY, fname)
             log.info('Asked to store %s, need to convert first', fname)
             fname_no_ext, ext = os.path.splitext(fname)
             with tempfile.NamedTemporaryFile(suffix=ext) as original:
@@ -62,19 +65,20 @@ def unpack_and_convert(job_key, s3client, redis):
             fname = fname_no_ext + '.mobi'
         store_file(s3client, fname, data)
 
-    delete_raw_file(s3client, job_key)
+    delete_raw_file(s3client, s3key)
+    redis.delete(job_key)
 
-def unpack(job_key, s3client, redis):
-    log.info('Got a request to unpack %s', job_key)
-    data = s3client.get_object(Key=job_key, Bucket=RAW_FILE_BUCKET)
+def unpack(s3key, s3client, redis):
+    log.info('Got a request to unpack %s', s3key)
+    data = s3client.get_object(Key=s3key, Bucket=RAW_FILE_BUCKET)
     with tempfile.NamedTemporaryFile() as fd:
         raw_file_contents = data['Body'].read()
         fd.write(raw_file_contents)
         fd.flush()
 
-        if not should_unpack(job_key):
-            log.info("Not unpacking %s", job_key)
-            return [(job_key, raw_file_contents)]
+        if not should_unpack(s3key):
+            log.info("Not unpacking %s", s3key)
+            return [(s3key, raw_file_contents)]
 
         to_extract = archive_contents(fd)
         if not to_extract:
@@ -87,7 +91,7 @@ def unpack(job_key, s3client, redis):
             log.info('Processing %s %s', index, fname)
             file_contents = check_output(['unar', '-o', '-', '-i', fd.name, str(index)])
             log.info('Got %d bytes', len(file_contents))
-            ret.append(fname, file_contents)
+            ret.append((fname, file_contents))
         return ret
 
 

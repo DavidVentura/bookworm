@@ -6,7 +6,7 @@ import shlex
 
 import utils
 from threading import Thread
-from bookworm.constants import IRC_TIME_TO_FIRST_COMMAND, IRC_CHANNEL, REDIS_BOOK_COMMANDS, REDIS_FETCH_FILE
+from bookworm.constants import IRC_TIME_TO_FIRST_COMMAND, IRC_CHANNEL, REDIS_BOOK_COMMANDS, REDIS_FETCH_FILE, REDIS_STEP_KEY
 from bookworm.logger import log, setup_logger
 
 import redis
@@ -53,7 +53,7 @@ class IRCClient(irc.client.SimpleIRCClient):
 
             bot = command['bot'].strip()
             book = command['book'].strip()
-            # set_job_state(job_key, 'waiting', time.time())
+            self.r.hset('book_'+book, REDIS_STEP_KEY, 'REQUESTED')
             self.connection.privmsg(self.target, f'!{bot} {book}')
 
     def on_pubmsg(self, connection, event):
@@ -84,7 +84,7 @@ class IRCClient(irc.client.SimpleIRCClient):
         filename, peer_address, peer_port, size = parts
         peer_address = irc.client.ip_numstr_to_quad(peer_address)
         peer_port = int(peer_port)
-        job_key = filename
+        job_key = 'book_' + filename
         data = json.dumps({'ip': peer_address,
                            'port': peer_port,
                            'size': int(size),
