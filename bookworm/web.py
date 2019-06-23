@@ -17,7 +17,8 @@ def send_status(server, client=None, force=False):
         if (datetime.now() - last_msg).total_seconds() < 2:
             return
         last_msg = datetime.now()
-    status = { 'SEARCH': q.search_status(), 'BOOKS': q.books_status()}
+    #status = { 'SEARCH': q.search_status(), 'BOOKS': q.books_status()}
+    status = None
     if client is None:
         ws.send_message_to_all(json.dumps(status))
     else:
@@ -30,10 +31,11 @@ def message_received(client, server, message):
     j = json.loads(message)
     print(j)
     if j['type'].upper() == 'SEARCH':
-        q.new_search(j['book'], j['extension'])
+        #q.new_search(j['book'], j['extension'])
+        pass
 
     if j['type'].upper() == 'BOOK':
-        q.new_dl(j['book'])
+        pass
 
     send_status(server)
 
@@ -42,7 +44,6 @@ def updated(force=False):
 
 
 if __name__ == '__main__':
-    q = qManager(updated)
     ws = WebsocketServer(8081, host='127.0.0.1')
     ws.set_fn_new_client(new_client)
     ws.set_fn_message_received(message_received)

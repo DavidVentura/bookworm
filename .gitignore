@@ -1,3 +1,4 @@
-*.pyc
+.venv
 *.swp
-*/.*.swp
+__pycache__
+bookworm.egg-info
