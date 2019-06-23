@@ -6,6 +6,9 @@ import redis
 
 s3client = s3.client()
 app = Flask(__name__)
+pool = pg_simple.config_pool(dsn='dbname=david user=david')
+db = pg_simple.PgSimple(pool)
+r = redis.StrictRedis(host='localhost', port=6379, decode_responses=True)
 
 @app.route('/books/status', methods=['GET'])
 def status_books():
@@ -52,8 +55,8 @@ def fetch_books():
     return ''
 
 
-if __name__ == '__main__':
-    pool = pg_simple.config_pool(dsn='dbname=david user=david')
-    db = pg_simple.PgSimple(pool)
-    r = redis.StrictRedis(host='localhost', port=6379, decode_responses=True)
+def main():
     app.run(host='0.0.0.0', debug=True)
+
+if __name__ == '__main__':
+    main()
