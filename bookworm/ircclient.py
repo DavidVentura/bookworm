@@ -4,10 +4,10 @@ import sys
 import time
 import shlex
 
-import utils
 from threading import Thread
 from bookworm.constants import IRC_TIME_TO_FIRST_COMMAND, IRC_CHANNEL, REDIS_BOOK_COMMANDS, REDIS_FETCH_FILE, REDIS_STEP_KEY
 from bookworm.logger import log, setup_logger
+from bookworm.utils import random_hash
 
 import redis
 import irc.client
@@ -100,7 +100,7 @@ class IRCClient(irc.client.SimpleIRCClient):
 def main():
 
     setup_logger()
-    name = "bookbot" + utils.random_hash()
+    name = "bookbot" + random_hash()
 
     c = IRCClient(IRC_CHANNEL, name)
     c.wait_for_commands()
