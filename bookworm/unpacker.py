@@ -1,3 +1,4 @@
+import os
 import json
 import socket
 import sys
@@ -27,6 +28,14 @@ def archive_contents(fd):
             to_extract[f['XADIndex']] = fname
     return to_extract
 
+def convert_to_mobi(orig_fname) -> bytes:
+    with tempfile.NamedTemporaryFile(suffix='.mobi') as fd:
+        log.info('Converting %s to mobi at %s', orig_fname, fd.name)
+        check_output(['ebook-convert', orig_fname, fd.name, '--output-profile=kindle_pw'])
+        log.info('Done converting')
+        buff = open(fd.name, 'rb').read()
+        return buff
+
 def store_file(s3client, fname, file_contents):
     log.info('Puttin in s3 under bucket %s with key %s', PROCESSED_FILE_BUCKET, fname)
     s3client.put_object(Body=file_contents, Bucket=PROCESSED_FILE_BUCKET, Key=fname)
@@ -36,6 +45,25 @@ def delete_raw_file(s3client, job_key):
     log.info('Deleting %s from %s', job_key, RAW_FILE_BUCKET)
     s3client.delete_object(Bucket=RAW_FILE_BUCKET, Key=job_key)
 
+def unpack_and_convert(job_key, s3client, redis):
+    unpacked_files = unpack(job_key, s3client, redis)
+    # TODO set_job_state(job_key, 'UNPACK_DONE', job_key)
+    log.info('Done unpacking job %s', job_key)
+
+    for fname, data in unpacked_files:
+        if not fname.lower().endswith('mobi'):
+            log.info('Asked to store %s, need to convert first', fname)
+            fname_no_ext, ext = os.path.splitext(fname)
+            with tempfile.NamedTemporaryFile(suffix=ext) as original:
+                original.write(data)
+                original.flush()
+                converted_data = convert_to_mobi(original.name)
+                data = converted_data
+            fname = fname_no_ext + '.mobi'
+        store_file(s3client, fname, data)
+
+    delete_raw_file(s3client, job_key)
+
 def unpack(job_key, s3client, redis):
     log.info('Got a request to unpack %s', job_key)
     data = s3client.get_object(Key=job_key, Bucket=RAW_FILE_BUCKET)
@@ -44,28 +72,24 @@ def unpack(job_key, s3client, redis):
         fd.write(raw_file_contents)
         fd.flush()
 
-        if should_unpack(job_key):
-            to_extract = archive_contents(fd)
-        else:
+        if not should_unpack(job_key):
             log.info("Not unpacking %s", job_key)
-            store_file(s3client, job_key, raw_file_contents)
-            delete_raw_file(s3client, job_key)
-            return
+            return [(job_key, raw_file_contents)]
 
+        to_extract = archive_contents(fd)
         if not to_extract:
             log.info(contents['lsarContents'])
             log.error("Could not find any valid file")
-            return
+            return []
 
+        ret = []
         for index, fname in to_extract.items():
             log.info('Processing %s %s', index, fname)
             file_contents = check_output(['unar', '-o', '-', '-i', fd.name, str(index)])
             log.info('Got %d bytes', len(file_contents))
-            store_file(s3client, fname, file_contents)
+            ret.append(fname, file_contents)
+        return ret
 
-    # TODO set_job_state(job_key, 'UNPACK_DONE', job_key)
-    delete_raw_file(s3client, job_key)
-    log.info('Done with job %s', job_key)
 
 def main():
     r = redis.StrictRedis(host='localhost', port=6379)
@@ -81,7 +105,7 @@ def main():
         params['s3client'] = s3client
         params['redis'] = r
 
-        t = Thread(target=unpack, kwargs=params)
+        t = Thread(target=unpack_and_convert, kwargs=params)
         t.daemon = True
         t.start()
 
