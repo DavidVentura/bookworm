@@ -66,7 +66,16 @@ def search_books():
 @app.route('/book/fetch', methods=['POST'])
 def fetch_books():
     fetch = request.json
-    r.rpush(constants.REDIS_BOOK_COMMANDS, json.dumps({'bot': fetch['bot'], 'book': fetch['book']}))
+    data = {'bot': fetch['bot'],
+            'book': fetch['book'],
+            'meta': {
+                'unpack_file_queue': constants.REDIS_UNPACK_FILE,
+                'fetch_file_queue': constants.REDIS_FETCH_FILE,
+                'raw_file_bucket': constants.RAW_FILE_BUCKET,
+                'processed_file_bucket': constants.PROCESSED_FILE_BUCKET,
+            }
+           }
+    r.rpush(constants.REDIS_BOOK_COMMANDS, json.dumps(data))
     return ''
 
 

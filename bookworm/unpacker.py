@@ -8,7 +8,7 @@ from threading import Thread
 from subprocess import check_output
 from bookworm import s3
 from bookworm.logger import log, setup_logger
-from bookworm.constants import RAW_FILE_BUCKET, PROCESSED_FILE_BUCKET, UNPACKABLE_EXTENSIONS, REDIS_UNPACK_FILE, REDIS_STATE_KEY, REDIS_STEP_KEY
+from bookworm.constants import UNPACKABLE_EXTENSIONS, REDIS_UNPACK_FILE, REDIS_STATE_KEY, REDIS_STEP_KEY
 import redis
 
 def should_unpack(fname):
@@ -36,18 +36,18 @@ def convert_to_mobi(orig_fname) -> bytes:
         buff = open(fd.name, 'rb').read()
         return buff
 
-def store_file(s3client, fname, file_contents):
-    log.info('Puttin in s3 under bucket %s with key %s', PROCESSED_FILE_BUCKET, fname)
-    s3client.put_object(Body=file_contents, Bucket=PROCESSED_FILE_BUCKET, Key=fname)
-    log.info('Put in s3 under bucket %s with key %s', PROCESSED_FILE_BUCKET, fname)
+def store_file(s3client, fname, file_contents, meta):
+    log.info('Puttin in s3 under bucket %s with key %s', meta['processed_file_bucket'], fname)
+    s3client.put_object(Body=file_contents, Bucket=meta['processed_file_bucket'], Key=fname)
+    log.info('Put in s3 under bucket %s with key %s', meta['processed_file_bucket'], fname)
 
-def delete_raw_file(s3client, s3key):
-    log.info('Deleting %s from %s', s3key, RAW_FILE_BUCKET)
-    s3client.delete_object(Bucket=RAW_FILE_BUCKET, Key=s3key)
+def delete_raw_file(s3client, s3key, meta):
+    log.info('Deleting %s from %s', s3key, meta['raw_file_bucket'])
+    s3client.delete_object(Bucket=meta['raw_file_bucket'], Key=s3key)
 
-def unpack_and_convert(job_key, s3key, s3client, redis):
+def unpack_and_convert(job_key, s3key, s3client, redis, meta):
     redis.hset(job_key, REDIS_STEP_KEY, 'UNPACKING')
-    unpacked_files = unpack(s3key, s3client, redis)
+    unpacked_files = unpack(s3key, s3client, redis, meta)
     redis.hset(job_key, REDIS_STEP_KEY, 'UNPACK_DONE')
     log.info('Done unpacking job %s', job_key)
 
@@ -63,14 +63,14 @@ def unpack_and_convert(job_key, s3key, s3client, redis):
                 converted_data = convert_to_mobi(original.name)
                 data = converted_data
             fname = fname_no_ext + '.mobi'
-        store_file(s3client, fname, data)
+        store_file(s3client, fname, data, meta)
 
-    delete_raw_file(s3client, s3key)
+    delete_raw_file(s3client, s3key, meta)
     redis.delete(job_key)
 
-def unpack(s3key, s3client, redis):
+def unpack(s3key, s3client, redis, meta):
     log.info('Got a request to unpack %s', s3key)
-    data = s3client.get_object(Key=s3key, Bucket=RAW_FILE_BUCKET)
+    data = s3client.get_object(Key=s3key, Bucket=meta['raw_file_bucket'])
     with tempfile.NamedTemporaryFile() as fd:
         raw_file_contents = data['Body'].read()
         fd.write(raw_file_contents)
@@ -100,7 +100,7 @@ def main():
     setup_logger()
     s3client = s3.client()
     while True:
-        log.info('Waiting for message...')
+        log.info('Waiting for message on %s', REDIS_UNPACK_FILE)
         topic, message = r.blpop(REDIS_UNPACK_FILE)
 
         log.info('got message: %s', message)

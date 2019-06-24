@@ -3,13 +3,13 @@ import socket
 import sys
 import time
 from threading import Thread
-from bookworm.constants import RAW_FILE_BUCKET, REDIS_UNPACK_FILE, REDIS_FETCH_FILE, REDIS_STATE_KEY, REDIS_STEP_KEY
+from bookworm.constants import REDIS_FETCH_FILE, REDIS_STATE_KEY, REDIS_STEP_KEY
 from bookworm.logger import log, setup_logger
 from bookworm import s3
 
 import redis
 
-def netcat(filename, ip, port, size, job_key, s3client, redis):
+def netcat(filename, ip, port, size, job_key, s3client, redis, meta):
     log.info('netcat: %s %d %d %s', ip, port, size, filename)
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     log.info("Fetching %s", filename)
@@ -38,16 +38,16 @@ def netcat(filename, ip, port, size, job_key, s3client, redis):
     s.close()
     log.info("Putting file in s3")
     redis.hset(job_key, REDIS_STATE_KEY, '100')
-    s3client.put_object(Body=buff, Bucket=RAW_FILE_BUCKET, Key=filename)
+    s3client.put_object(Body=buff, Bucket=meta['raw_file_bucket'], Key=filename)
     log.info("File %s in s3 with key %s", filename, job_key)
-    redis.rpush(REDIS_UNPACK_FILE, json.dumps({'job_key': job_key, 's3key': filename}))
+    redis.rpush(meta['unpack_file_queue'], json.dumps({'job_key': job_key, 's3key': filename, 'meta': meta}))
 
 def main():
     r = redis.StrictRedis(host='localhost', port=6379)
     setup_logger()
 
     while True:
-        log.info('Waiting for message...')
+        log.info('Waiting for message on %s', REDIS_FETCH_FILE)
         topic, message = r.blpop(REDIS_FETCH_FILE)
 
         log.info('got message: %s', message)

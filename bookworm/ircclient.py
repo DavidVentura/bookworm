@@ -5,7 +5,7 @@ import time
 import shlex
 
 from threading import Thread
-from bookworm.constants import IRC_TIME_TO_FIRST_COMMAND, IRC_CHANNEL, REDIS_BOOK_COMMANDS, REDIS_FETCH_FILE, REDIS_STEP_KEY
+from bookworm.constants import IRC_TIME_TO_FIRST_COMMAND, IRC_CHANNEL, REDIS_BOOK_COMMANDS, REDIS_STEP_KEY
 from bookworm.logger import log, setup_logger
 from bookworm.utils import random_hash
 
@@ -36,7 +36,7 @@ class IRCClient(irc.client.SimpleIRCClient):
 
     def wait_for_commands(self):
         while True:
-            log.info('Waiting for message...')
+            log.info('Waiting for message on %s', REDIS_BOOK_COMMANDS)
             topic, message = self.r.blpop(REDIS_BOOK_COMMANDS)
             log.info('got message: %s', message)
 
@@ -51,9 +51,13 @@ class IRCClient(irc.client.SimpleIRCClient):
             command = json.loads(data)
             log.info('Command: %s', command)
 
+            self.meta = command['meta']
             bot = command['bot'].strip()
             book = command['book'].strip()
-            self.r.hset('book_'+book, REDIS_STEP_KEY, 'REQUESTED')
+            self.job_key = 'book_'+book
+            self.fetch_queue = command['meta']['fetch_file_queue']
+
+            self.r.hset(self.job_key, REDIS_STEP_KEY, 'REQUESTED')
             self.connection.privmsg(self.target, f'!{bot} {book}')
 
     def on_pubmsg(self, connection, event):
@@ -89,9 +93,10 @@ class IRCClient(irc.client.SimpleIRCClient):
                            'port': peer_port,
                            'size': int(size),
                            'filename': filename,
-                           "job_key": job_key})
-        log.info('Publishing to FETCH_FILE: %s', data)
-        self.r.rpush(REDIS_FETCH_FILE, data)
+                           "job_key": job_key,
+                           "meta": self.meta})
+        log.info('Publishing to %s: %s', self.fetch_queue, data)
+        self.r.rpush(self.fetch_queue, data)
 
     def on_disconnect(self, connection, event):
         sys.exit(0)
