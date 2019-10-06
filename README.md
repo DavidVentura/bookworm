@@ -1,15 +1,9 @@
 # Requirements
 
 * S3 (minio can be used for a local instance).
-* Redis
+* redis
 * sqlite
-* Python3.6
-
-# Batch process
-
-To remove the initial roundtrip when searching for books, I keep a cache in a
-local sqlite database.  
-To populate this cache, there's an API endpoint (`books/batch_update`) that triggers each bot's `LIST` command, at `#ebooks`
+* python3.6
 
 # Services
 
@@ -51,7 +45,7 @@ In charge of taking a file (as provided from IRC), unpacking it and, if necessar
 
 
 ### Web interface
---
+TODO
 
 ### Basic (Kindle) Web interface
 The kindle has a very basic webbrowser (I believe it renders up to HTML4, CSS2.1), which can be used to download (available) books directly.  
@@ -65,11 +59,17 @@ if ($http_user_agent ~* "armv7l") {
 }
 ```
 
+# Batch process
+
+To remove the initial roundtrip when searching for books, I keep a cache in a
+local sqlite database.  
+To populate this cache, there's an API endpoint (`books/batch_update`) that triggers each bot's `LIST` command, at `#ebooks`
+
 # CLI
 
 For now, you can control this via HTTP.
 
-```
+```bash
 $ # populate the index, only once in a while for new books
 $ http POST localhost:5000/books/batch_update
 $ # search the book that you want
@@ -84,3 +84,9 @@ index"
 * Proper status of requests in progress
 * Web UI 
 
+# Misc
+
+To update the graph in the README
+```
+$ dot docs/services.dot -Tpng > docs/services.png
+```
