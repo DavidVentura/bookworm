@@ -1,96 +1,59 @@
 <!DOCTYPE html>
 <html ng-app="app">
 	<head>
-		<script src="js/angular.min.js"></script>
-		<script src="js/app.js"></script>
-		<link href="styles.css" rel="stylesheet" type="text/css"></link>
+		<script src="https://simulacra.js.org/simulacra.min.js"></script>
+		<link href="styles.css" rel="stylesheet" type="text/css" />
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script>
+                var state = {};
+                window.onload = function() {
+                state = {
+                        currently_processing: [{
+                                "KEY": "book_Brandon Sanderson - Children of the Nameless (epub).rar",
+                                "STEP": "REQUESTED",
+                                "STATE": "100"
+                                },
+                        ],
+                    search_results: [{"bot": "Ook", "book": "Brandon Sanderson - Children of the Nameless (epub).rar"}, {"bot": "Pondering42", "book": "Brandon Sanderson - Children of the Nameless (epub).rar"}, {"bot": "dragnbreaker", "book": "Brandon Sanderson - Children of the Nameless (epub).rar"}, {"bot": "Pondering42", "book": "Brandon Sanderson - [Elantris SS] - The Hope of Elantris (epub).rar"}, {"bot": "Pondering42", "book": "Brandon Sanderson - [Elantris SS] - The Hope of Elantris (lit).rar"}, {"bot": "Pondering42", "book": "Brandon Sanderson - [Elantris SS] - The Hope of Elantris (mobi).rar"}, {"bot": "Ook", "book": "Brandon Sanderson - Mistborn 01-06 & SS (epub).rar"}, {"bot": "Pondering42", "book": "Brandon Sanderson - [ss] Firstborn (v5.0) (epub).rar"}, {"bot": "Pondering42", "book": "Brandon Sanderson - [ss] Firstborn (v5.0) (mobi).rar"}, {"bot": "Pondering42", "book": "Brandon Sanderson - ss - The Hope of Elantris (epub).rar"}, {"bot": "Ook", "book": "Magazine - Grimdark - Issue 004 - Ricahrd Ford, Brandon Sanderson, Mike Brooks, Peter V Brett, Matthew Ward (epub).rar"}, {"bot": "Pondering42", "book": "Magazine - Grimdark - Issue 004 - Ricahrd Ford, Brandon Sanderson, Mike Brooks, Peter V Brett, Matthew Ward (epub).rar"}, {"bot": "Ook", "book": "Magazine - Grimdark - Issue 004 - Ricahrd Ford, Brandon Sanderson, Mike Brooks, Peter V Brett, Matthew Ward (mobi).rar"}, {"bot": "Pondering42", "book": "Magazine - Grimdark - Issue 004 - Ricahrd Ford, Brandon Sanderson, Mike Brooks, Peter V Brett, Matthew Ward (mobi).rar"}],
+                    available_files: ['a', 'b'],
+                    };
+                var bindObject = window.simulacra;
+                var template = document.getElementById('product')
+                
+                var node = bindObject(state, [ template, {
+                        currently_processing: ['.currently_processing', {
+                                KEY: '.key',
+                                STEP: '.step',
+                                STATE: '.state',
+                        }],
+                    search_results: ['.search_results', {
+                        bot: '.bot',
+                        book: '.book',
+                    }],
+                    available_files: '.available_files'
+                    } ]);
+                document.body.appendChild(node);
+                }
+        </script>
 	</head>
 <body>
-	<div ng-controller="main">
-			<h2>Search books</h2>
-			<div class="form">
-				<div>
-					<label>Book</label>
-					<input type="text" ng-model="book">
-				</div>
-				<div>
-					<label>Extension</label>
-					<input type="text" ng-model="extension">
-				</div>
-				<input type="button" value="search" ng-click="searchBook(book,extension)">
-			</div>
-
-			<div class="content">
-				<div class="tabs">
-					<ul>
-						<li ng-class="{active:isActiveTab('SEARCH')}" ng-click="changeTab('SEARCH')">Search</li>
-						<li ng-class="{active:isActiveTab('RESULTS')}" ng-click="changeTab('RESULTS'); newElement(false)">Results <label ng-show="new" class="new-item">&#x21;</label></li>
-					</ul>
-				</div>
-				<div class="tab-content">
-					<div class="search" id="SEARCH" ng-show="activeTab==='SEARCH'">
-						<table>
-							<thead>
-								<tr>
-									<th></th>
-									<th>Query</th>
-									<th>Status</th>
-									<th class="nomobile">Elapsed</th>
-									<th class="output">Output</th>
-								</tr>
-							</thead>
-							<tbody>
-								<tr ng-repeat="l in searchlist | filter:{TYPE:'SEARCH'} track by l.ID" ng-class="{'expanded':limit!=undefined}">
-									<td><a ng-click="showMore(l)">{{limit[l.ID] ? '&#9650;' : '&#9660;'}}</a></td>
-									<td> <span>{{l.QUERY}}</span> </td>
-									<td> <label class="{{l.STATUS}}">{{l.STATUS}}</label> </td>
-									<td class="nomobile"> <p ng-show="l.STATUS=='WAITING'|| l.STATUS=='DOWNLOADING'">{{l.ELAPSED}}</p> </td>
-									<td>
-										<i ng-show="l.STATUS=='DISCONNECTED'">Found {{l.OUT.length}} matches:</i>
-										<ul>
-											<li ng-repeat="o in l.OUT | limitTo:limit[l.ID]||5">
-												<a ng-click="download(o.TEXT)">{{o.BOOK}} (<b>{{o.BOT}}</b>) <br/> <b>Tags</b>: {{o.TAGS}} <b>Info</b>: {{o.INFO}}</a>
-											</li>
-										</ul>
-									</td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
-					<div class="results" id="RESULTS" ng-show="activeTab==='RESULTS'">
-						<table>
-							<thead>
-								<tr>
-									<th>Title</th>
-									<th>Status</th>
-									<th>Progress</th>
-									<th class="nomobile">Elapsed</th>
-									<th>Output</th>
-								</tr>
-							</thead>
-							<tbody>
-								<tr ng-repeat="l in results| filter:{TYPE:'BOOK'} track by l.ID" class="expanded">
-									<td> <span>{{l.QUERY}}<span> </td>
-									<td> <label class="{{l.STATUS}}">{{l.STATUS}}</label> </td>
-									<td>
-									<progress-bar progress="l.PROGRESS"></progress-bar>
-									</td>
-									<td class="nomobile"> <p ng-hide="l.STATUS=='DISCONNECTED'|| l.STATUS=='TIMED OUT'">{{l.ELAPSED}}</p> </td>
-									<td>
-										<ul>
-											<li ng-repeat="o in l.OUT">
-												<a ng-href="/books/{{o}}" target="_blank">{{clean(o)}}  &#8675;</a>
-											</li>
-										</ul>
-									</td>
-								</tr>
-							</tbody>
-						</table>
-					</div>
-				</div>
-			</div>
-
-	</div>
+        <template id="product">
+            <span class="currently_processing">
+                <div>
+                <span class="key"></span>
+                <span class="step"></span>
+                <span class="state"></span>
+                </div>
+            </span>
+            ############
+            <div class="search_results">
+                <div>
+                    <span class="bot"></span>
+                    <span class="book"></span>
+                </div>
+            </div>
+            ############
+            <p class="available_files"></p>
+        </template>
 </body>
 </html>

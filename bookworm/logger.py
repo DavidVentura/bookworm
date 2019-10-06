@@ -1,7 +1,7 @@
 import sys
 import logging
 
-FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+FORMAT = '%(asctime)s - %(threadName)s - %(levelname)s - %(message)s'
 
 log = logging.getLogger(__name__)
 def setup_logger():

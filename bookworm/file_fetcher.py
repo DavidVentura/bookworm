@@ -3,7 +3,7 @@ import socket
 import sys
 import time
 from threading import Thread
-from bookworm.constants import REDIS_FETCH_FILE, REDIS_STATE_KEY, REDIS_STEP_KEY
+from bookworm.constants import REDIS
 from bookworm.logger import log, setup_logger
 from bookworm import s3
 
@@ -16,7 +16,7 @@ def netcat(filename, ip, port, size, job_key, s3client, redis, meta):
     s.connect((ip, port))
     log.info("Receiving file %s", filename)
 
-    redis.hset(job_key, REDIS_STEP_KEY, 'DOWNLOADING')
+    redis.hset(job_key, REDIS.STEP_KEY, 'DOWNLOADING')
     buff = b''
     count = 0
     last_perc = 0
@@ -30,14 +30,14 @@ def netcat(filename, ip, port, size, job_key, s3client, redis, meta):
         perc = int(100 * count / size)
         if perc % 5 == 0 and perc != last_perc:
             log.info("Download percentage: %d", perc)
-            redis.hset(job_key, REDIS_STATE_KEY, str(perc))
+            redis.hset(job_key, REDIS.STATE_KEY, str(perc))
             last_perc = perc
         if count >= size:
             break
     log.info("Download complete")
     s.close()
     log.info("Putting file in s3")
-    redis.hset(job_key, REDIS_STATE_KEY, '100')
+    redis.hset(job_key, REDIS.STATE_KEY, '100')
     s3client.put_object(Body=buff, Bucket=meta['raw_file_bucket'], Key=filename)
     log.info("File %s in s3 with key %s", filename, job_key)
     redis.rpush(meta['unpack_file_queue'], json.dumps({'job_key': job_key, 's3key': filename, 'meta': meta}))
@@ -47,8 +47,8 @@ def main():
     setup_logger()
 
     while True:
-        log.info('Waiting for message on %s', REDIS_FETCH_FILE)
-        topic, message = r.blpop(REDIS_FETCH_FILE)
+        log.info('Waiting for message on %s', REDIS.Q_FETCH_FILE)
+        topic, message = r.blpop(REDIS.Q_FETCH_FILE)
 
         log.info('got message: %s', message)
         params = json.loads(message.decode('utf-8'))

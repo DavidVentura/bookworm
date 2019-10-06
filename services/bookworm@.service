@@ -1,0 +1,11 @@
+[Unit]
+Description=Bookworm %i service
+
+[Service]
+User=david
+Type=simple
+ExecStart=/home/david/git/irc-books/.venv/bin/%i
+Nice=5
+
+[Install]
+WantedBy=multi-user.target

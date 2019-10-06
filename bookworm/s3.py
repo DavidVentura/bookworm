@@ -6,8 +6,8 @@ def client():
     session = boto3.session.Session()
     return session.client(
         service_name='s3',
-        aws_access_key_id='3207900NM6AZ01AN02O1',
-        aws_secret_access_key='pmWuVRye20yiPbRk5tau1L6ggSueeaU5KXh2n0aZ',
+        aws_access_key_id='LBSBQ46DB9S160XIW438',
+        aws_secret_access_key='7nVT+TwGzPoC02AIIY4+1fVNdj07RQt+ntd55S+I',
         endpoint_url='http://localhost:9000',
         config=config
     )

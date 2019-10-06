@@ -6,9 +6,11 @@ digraph Services {
    Unpacker
    WebAPI
    BulkInserter
-   S3
    DB
 
-   WebAPI -> IRCClient -> FileFetcher -> Unpacker -> S3
-   Unpacker -> BulkInserter -> DB
+   WebAPI -> IRCClient -> FileFetcher -> Unpacker
+   FileFetcher -> BulkInserter
+
+   WebAPI -> DB[label="Search" style=dashed];
+   BulkInserter -> DB[label="Save cache" style=dashed];
 }

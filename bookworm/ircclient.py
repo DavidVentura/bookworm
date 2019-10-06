@@ -5,7 +5,7 @@ import time
 import shlex
 
 from threading import Thread
-from bookworm.constants import IRC_TIME_TO_FIRST_COMMAND, IRC_CHANNEL, REDIS_BOOK_COMMANDS, REDIS_STEP_KEY
+from bookworm.constants import IRC, REDIS, JOB_KEY_PREFIX
 from bookworm.logger import log, setup_logger
 from bookworm.utils import random_hash
 
@@ -36,13 +36,13 @@ class IRCClient(irc.client.SimpleIRCClient):
 
     def wait_for_commands(self):
         while True:
-            log.info('Waiting for message on %s', REDIS_BOOK_COMMANDS)
-            topic, message = self.r.blpop(REDIS_BOOK_COMMANDS)
+            log.info('Waiting for message on %s', REDIS.Q_BOOK_COMMANDS)
+            topic, message = self.r.blpop(REDIS.Q_BOOK_COMMANDS)
             log.info('got message: %s', message)
 
-            delta = IRC_TIME_TO_FIRST_COMMAND - (time.time() - self.startup)
+            delta = IRC.TIME_TO_FIRST_COMMAND - (time.time() - self.startup)
             while delta > 0:
-                delta = IRC_TIME_TO_FIRST_COMMAND - (time.time() - self.startup)
+                delta = IRC.TIME_TO_FIRST_COMMAND - (time.time() - self.startup)
                 log.info("I am not ready yet, still %d to go", delta)
                 time.sleep(max(min(delta, 2), 0))
 
@@ -52,13 +52,12 @@ class IRCClient(irc.client.SimpleIRCClient):
             log.info('Command: %s', command)
 
             self.meta = command['meta']
-            bot = command['bot'].strip()
-            book = command['book'].strip()
-            self.job_key = 'book_'+book
+            irc_command = command['command'].strip()
+            self.job_key = JOB_KEY_PREFIX + irc_command
             self.fetch_queue = command['meta']['fetch_file_queue']
 
-            self.r.hset(self.job_key, REDIS_STEP_KEY, 'REQUESTED')
-            self.connection.privmsg(self.target, f'!{bot} {book}')
+            self.r.hset(self.job_key, REDIS.STEP_KEY, 'REQUESTED')
+            self.connection.privmsg(self.target, irc_command)
 
     def on_pubmsg(self, connection, event):
         log.debug('pubmsg %s', event)
@@ -107,6 +106,6 @@ def main():
     setup_logger()
     name = "bookbot" + random_hash()
 
-    c = IRCClient(IRC_CHANNEL, name)
+    c = IRCClient(IRC.CHANNEL, name)
     c.wait_for_commands()
 main()
