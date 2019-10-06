@@ -1,10 +1,11 @@
-from flask import Flask, render_template, make_response, request, g
-from bookworm import s3, constants
-import sqlite3
+import html
 import json
-import redis
 import os
 import re
+import redis
+import sqlite3
+from flask import Flask, render_template, make_response, request, g
+from bookworm import s3, constants
 
 s3client = s3.client()
 app = Flask(__name__)
@@ -41,7 +42,7 @@ def clean_book_name(book):
 def index():
     objects = s3client.list_objects_v2(Bucket=constants.BUCKET.PROCESSED_FILE)['Contents']
     objects = sorted(objects, key=lambda x: x['LastModified'], reverse=True)
-    books = [(obj['Key'], clean_book_name(obj['Key'])) for obj in objects]
+    books = [(html.escape(obj['Key']), clean_book_name(obj['Key'])) for obj in objects]
     return render_template('kindle-index.j2', books=books)
 
 @app.route('/book/<path:book>')
