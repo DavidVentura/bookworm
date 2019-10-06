@@ -34,7 +34,7 @@ def status_books():
     return json.dumps(ret)
 
 def clean_book_name(book):
-    cbr = re.compile(r'epub|azw3|mobi|\(v[0-9.]+\)')
+    cbr = re.compile(r'epub|azw3|mobi|retail|\(v[0-9.]+\)', re.I)
     return cbr.sub('', book).rstrip('() .-')
 
 @app.route('/')
