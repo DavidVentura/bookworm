@@ -59,6 +59,9 @@ if ($http_user_agent ~* "armv7l") {
 }
 ```
 
+There's a special template for the kindle (see `kindle-index.j2`) that makes it
+somewhat easy to download the books even with the clunky kindle controls.
+
 # Batch process
 
 To remove the initial roundtrip when searching for books, I keep a cache in a
@@ -67,7 +70,23 @@ To populate this cache, there's an API endpoint (`books/batch_update`) that trig
 
 # CLI
 
-For now, you can control this via HTTP.
+You can use the provided CLI tool:
+
+```
+$ python bookworm/cli.py neverwhere gaiman
+....
+16) {'bot': 'shytot', 'book': 'Neverwhere_ A Novel - Neil Gaiman.mobi'}
+Input the number to download: 16
+Status change {'STEP': 'REQUESTED'}
+Status change {'STEP': 'DOWNLOADING'}
+Status change {'STEP': 'DOWNLOADING', 'STATE': '25'}
+Status change {'STEP': 'DOWNLOADING', 'STATE': '45'}
+Status change {'STEP': 'DOWNLOADING', 'STATE': '70'}
+Status change {'STEP': 'DOWNLOADING', 'STATE': '95'}
+Status change {'STEP': 'DONE'}
+```
+
+or you can control this via HTTP:
 
 ```bash
 $ # populate the index, only once in a while for new books
@@ -75,14 +94,13 @@ $ http POST localhost:5000/books/batch_update
 $ # search the book that you want
 $ http localhost:5000/book/search terms=='brandon sanderson'
 $ # download book, will be placed in the S3 bucket
-$ http POST localhost:5000/book/fetch bot=Pondering42 book="some-book-from the
-index"
+$ http POST localhost:5000/book/fetch bot=Pondering42 book="some-book-from the index"
 ```
 
 # TODO
 
-* Proper status of requests in progress
 * Web UI 
+* Prevent SQL injection on the `search` endpoint
 
 # Misc
 
