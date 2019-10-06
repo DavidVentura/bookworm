@@ -26,6 +26,7 @@ sudo systemctl start bookworm@ircclient.service
 sudo systemctl start bookworm@file_fetcher.service
 sudo systemctl start bookworm@unpacker.service
 sudo systemctl start bookworm@web.service
+sudo systemctl start bookworm@db_cache_populate.service
 ```
 
 ## IRC Client
