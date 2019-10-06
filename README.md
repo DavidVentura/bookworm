@@ -1,6 +1,7 @@
 # Requirements
 
 * S3 (minio can be used for a local instance).
+    * the profile used for S3 is named `bookworm`
 * redis
 * sqlite
 * python3.6
