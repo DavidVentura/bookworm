@@ -7,22 +7,9 @@
 
 # Batch process
 
-To remove the initial roundtrip when looking for books, I keep a cache in postgres.  
-To populate this cache, I triggered each of the bot's `LIST` command, at `#ebooks`
-
-I executed:
-
-```
-@pondering42
-@dv8
-@shytot
-@dragnbreaker
-@Xon-new
-```
-
-Then fetched all of the files, unarchived, concatenated them together and
-deduped them.
-On the resulting file I ran `parse.py` which inserts it into the database.
+To remove the initial roundtrip when searching for books, I keep a cache in a
+local sqlite database.  
+To populate this cache, there's an API endpoint (`books/batch_update`) that triggers each bot's `LIST` command, at `#ebooks`
 
 # Services
 
@@ -78,5 +65,21 @@ if ($http_user_agent ~* "armv7l") {
 ```
 
 # CLI
-To be re-implemented
+
+For now, you can control this via HTTP.
+
+```
+$ # populate the index, only once in a while for new books
+$ http POST localhost:5000/books/batch_update
+$ # search the book that you want
+$ http localhost:5000/book/search terms=='brandon sanderson'
+$ # download book, will be placed in the S3 bucket
+$ http POST localhost:5000/book/fetch bot=Pondering42 book="some-book-from the
+index"
+```
+
+# TODO
+
+* Proper status of requests in progress
+* Web UI 
 
