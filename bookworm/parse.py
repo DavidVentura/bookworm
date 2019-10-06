@@ -16,6 +16,8 @@ def lines_to_dicts(lines):
     for line in lines:
         line = line.strip()
         match = r.match(line)
+        if match is None:
+            continue
         bot = match.group('bot').strip()
         book = match.group('book').strip()
         size = match.group('size').strip().lower()

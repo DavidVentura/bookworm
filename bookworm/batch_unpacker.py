@@ -6,7 +6,7 @@ import time
 import tempfile
 from threading import Thread
 from subprocess import check_output
-from bookworm import s3
+from bookworm import s3, parse
 from bookworm.logger import log, setup_logger
 from bookworm.constants import UNPACKABLE_EXTENSIONS, REDIS
 import redis
@@ -41,8 +41,13 @@ def unpack_and_store(job_key, s3key, s3client, redis, meta):
 
     for fname, data in unpacked_files:
         log.info('Batch process file: %s', fname)
-        books = bookworm.parse.lines_to_dicts(data.decode('utf-8'))
-        bookworm.parse.insert_books(books)
+        try:
+            decoded = data.decode('utf-8')
+        except UnicodeDecodeError:
+            decoded = data.decode('latin-1')
+
+        books = parse.lines_to_dicts(decoded.replace('\r', '').splitlines())
+        parse.insert_books(books)
 
     #delete_raw_file(s3client, s3key, meta)
     redis.delete(job_key)
@@ -87,8 +92,6 @@ def main():
         params['s3client'] = s3client
         params['redis'] = r
 
-        t = Thread(target=unpack_and_convert, kwargs=params)
+        t = Thread(target=unpack_and_store, kwargs=params)
         t.daemon = True
         t.start()
-
-main()
