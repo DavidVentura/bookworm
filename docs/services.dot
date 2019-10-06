@@ -3,13 +3,13 @@ digraph Services {
    rankdir=LR;
    IRCClient
    FileFetcher
-   Unpacker
+   BookUnpacker
    WebAPI
-   BulkInserter
+   DBCacheUpdater
    DB
 
-   WebAPI -> IRCClient -> FileFetcher -> Unpacker
-   FileFetcher -> BulkInserter
+   WebAPI -> IRCClient -> FileFetcher -> BookUnpacker
+   FileFetcher -> DBCacheUpdater
 
    WebAPI -> DB[label="Search" style=dashed];
    BulkInserter -> DB[label="Save cache" style=dashed];
