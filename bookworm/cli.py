@@ -1,12 +1,38 @@
 import json
+import requests
 import sys
-from bookworm.constants import REDIS_BOOK_COMMANDS
+import time
 
-import pg_simple
-import redis
+if len(sys.argv) == 1:
+    print("You must give search parameters")
+    sys.exit(1)
 
-bot = sys.argv[1]
-book = sys.argv[2]
+SEPARATOR = ' ~ '
+r = requests.get('http://localhost:5000/book/search', params={'terms': ' '.join(sys.argv[1:])})
+r.raise_for_status()
+entries = r.json()
 
-r = redis.StrictRedis(host='localhost', port=6379)
-r.rpush(REDIS_BOOK_COMMANDS, json.dumps({'bot': bot, 'book': book}))
+for i, e in enumerate(entries):
+    print('%02d) %s' % (i, e))
+
+index = int(input('Input the number to download: '))
+entry = entries[index]
+
+bot, book = entry['bot'], entry['book']
+r = requests.post('http://localhost:5000/book/fetch', json={'bot': bot, 'book': book})
+if not r.ok:
+    print(r.text)
+    sys.exit(1)
+
+_id = r.text
+book_status = None
+while True:
+    r = requests.get('http://localhost:5000/books/status')
+    all_statuses = r.json()
+    _b_status = all_statuses[_id]
+    if _b_status != book_status:
+        book_status = _b_status
+        print('Status change', book_status)
+    if book_status['STEP'] == 'DONE':
+        break
+    time.sleep(1)
