@@ -1,0 +1,14 @@
+digraph Services {
+   node [shape=rect];
+   rankdir=LR;
+   IRCClient
+   FileFetcher
+   Unpacker
+   WebAPI
+   BulkInserter
+   S3
+   DB
+
+   WebAPI -> IRCClient -> FileFetcher -> Unpacker -> S3
+   Unpacker -> BulkInserter -> DB
+}

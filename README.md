@@ -2,7 +2,7 @@
 
 * S3 (minio can be used for a local instance).
 * Redis
-* Postgresql
+* sqlite
 * Python3.6
 
 # Batch process
@@ -20,10 +20,15 @@ I executed:
 @Xon-new
 ```
 
-Then fetched all of the files, unarchived and concatenated them together.
-On the resulting file I ran `parse.py` which inserts it into postgres.
+Then fetched all of the files, unarchived, concatenated them together and
+deduped them.
+On the resulting file I ran `parse.py` which inserts it into the database.
 
 # Services
+
+## Diagram
+
+![](docs/services.png)
 
 ## Installation
 
