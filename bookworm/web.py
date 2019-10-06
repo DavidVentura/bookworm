@@ -77,16 +77,13 @@ def search_books():
     rows = cur.execute('SELECT bot, book FROM books where %s LIMIT 100' % all_conditions)
     return json.dumps(list(rows))
 
-#    books = db.fetchall('books',
-#                        fields=['bot', 'book'],
-#                        where=('lower(book) like all(%s)', [terms]),
-#                        limit=100)
-#    return json.dumps([b._asdict() for b in books])
-
 @app.route('/book/fetch', methods=['POST'])
 def fetch_books():
     fetch = request.json
+    job_key = constants.JOB_KEY_PREFIX + fetch['book']
+    job_key = job_key.strip()
     data = {'command': f'!{fetch["bot"]} {fetch["book"]}',
+            'job_key': job_key,
             'meta': {
                 'unpack_file_queue': constants.REDIS.Q_UNPACK_FILE,
                 'fetch_file_queue': constants.REDIS.Q_FETCH_FILE,
@@ -95,7 +92,7 @@ def fetch_books():
             }
            }
     r.rpush(constants.REDIS.Q_BOOK_COMMANDS, json.dumps(data))
-    return ''
+    return job_key
 
 @app.route('/books/batch_update', methods=['POST'])
 def batch_update():
@@ -105,7 +102,9 @@ def batch_update():
 
     batch_update_commands = ['@pondering42', '@dv8', '@shytot', '@dragnbreaker', '@Xon-new']
     for command in batch_update_commands:
+        job_key = constants.JOB_KEY_PREFIX + command.replace('@', 'batch_')
         data = {'command': command,
+                'job_key': job_key,
                 'meta': {
                     'unpack_file_queue': constants.REDIS.Q_PROCESS_BATCH_FILE,
                     'fetch_file_queue': constants.REDIS.Q_FETCH_FILE,

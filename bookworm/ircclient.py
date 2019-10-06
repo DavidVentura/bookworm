@@ -53,7 +53,7 @@ class IRCClient(irc.client.SimpleIRCClient):
 
             self.meta = command['meta']
             irc_command = command['command'].strip()
-            self.job_key = JOB_KEY_PREFIX + irc_command
+            self.job_key = command['job_key']
             self.fetch_queue = command['meta']['fetch_file_queue']
 
             self.r.hset(self.job_key, REDIS.STEP_KEY, 'REQUESTED')
@@ -87,12 +87,11 @@ class IRCClient(irc.client.SimpleIRCClient):
         filename, peer_address, peer_port, size = parts
         peer_address = irc.client.ip_numstr_to_quad(peer_address)
         peer_port = int(peer_port)
-        job_key = 'book_' + filename
         data = json.dumps({'ip': peer_address,
                            'port': peer_port,
                            'size': int(size),
                            'filename': filename,
-                           "job_key": job_key,
+                           "job_key": self.job_key,
                            "meta": self.meta})
         log.info('Publishing to %s: %s', self.fetch_queue, data)
         self.r.rpush(self.fetch_queue, data)

@@ -50,7 +50,8 @@ def unpack_and_store(job_key, s3key, s3client, redis, meta):
         parse.insert_books(books)
 
     #delete_raw_file(s3client, s3key, meta)
-    redis.delete(job_key)
+    redis.hset(job_key, REDIS.STEP_KEY, 'DONE')
+    redis.hdel(job_key, REDIS.STATE_KEY)
 
 def unpack(s3key, s3client, redis, meta):
     log.info('Got a request to unpack %s', s3key)
