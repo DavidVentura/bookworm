@@ -16,6 +16,7 @@ def netcat(filename, ip, port, size, job_key, s3client, redis, meta):
     s.connect((ip, port))
     log.info("Receiving file %s", filename)
 
+    log.info('Setting job %s in key %s to DOWNLOADING', job_key, REDIS.STEP_KEY)
     redis.hset(job_key, REDIS.STEP_KEY, 'DOWNLOADING')
     buff = b''
     count = 0
