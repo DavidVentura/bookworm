@@ -12,5 +12,5 @@ digraph Services {
    FileFetcher -> DBCacheUpdater
 
    WebAPI -> DB[label="Search" style=dashed];
-   BulkInserter -> DB[label="Save cache" style=dashed];
+   DBCacheUpdater -> DB[label="Save cache" style=dashed];
 }
