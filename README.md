@@ -4,6 +4,8 @@
 * redis
 * sqlite
 * python3.6
+* `ebook-convert` installed (to convert all formats to mobi)
+* `unar` to unarchive the books
 
 # Services
 
@@ -108,3 +110,5 @@ To update the graph in the README
 ```
 $ dot docs/services.dot -Tpng > docs/services.png
 ```
+
+`ebook-convert` is called with kindle\_pw profile.
