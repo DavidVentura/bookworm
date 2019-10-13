@@ -11,19 +11,31 @@ s3client = s3.client()
 app = Flask(__name__, static_url_path='')
 r = redis.StrictRedis(host='localhost', port=6379, decode_responses=True)
 
-def dict_factory(cursor, row):
-    d = {}
-    for idx, col in enumerate(cursor.description):
-        d[col[0]] = row[idx]
-    return d
-
 def get_db():
+    def dict_factory(cursor, row):
+        d = {}
+        for idx, col in enumerate(cursor.description):
+            d[col[0]] = row[idx]
+        return d
     db = getattr(g, '_database', None)
     if db is None:
         db = sqlite3.connect('books.db')
         db.row_factory = dict_factory
         g._database = db
     return db
+
+def book_search(terms):
+    conditions = []
+    for term in terms:
+        condition = f"lower(book) like ?"
+        conditions.append(condition)
+
+    all_conditions = ' AND '.join(conditions)
+
+    wildcard_terms = [f'%{term}%' for term in terms]
+    cur = get_db().cursor()
+    rows = cur.execute('SELECT bot, book FROM books where %s LIMIT 30' % all_conditions, wildcard_terms)
+    return list(rows)
 
 def current_status():
     keys = r.keys(f'{constants.JOB_KEY_PREFIX}*')
@@ -35,13 +47,13 @@ def current_status():
         ret.append(entry)
     return ret
 
-@app.route('/books/status', methods=['GET'])
-def status_books():
-    return json.dumps(current_status())
-
 def clean_book_name(book):
     cbr = re.compile(r'epub|azw3|mobi|retail|\(v[0-9.]+\)', re.I)
     return cbr.sub('', book).rstrip('() .-')
+
+@app.route('/books/status', methods=['GET'])
+def status_books():
+    return json.dumps(current_status())
 
 @app.route('/static/<path:path>')
 def _static(path):
@@ -51,18 +63,11 @@ def _static(path):
 def available():
     objects = s3client.list_objects_v2(Bucket=constants.BUCKET.PROCESSED_FILE)['Contents']
     objects = sorted(objects, key=lambda x: x['LastModified'], reverse=True)
-    books = [(html.escape(obj['Key']), clean_book_name(obj['Key'])) for obj in objects]
+    books = [(html.escape(obj['Key'], quote=False), clean_book_name(obj['Key'])) for obj in objects]
     return render_template('available_books.html', books=books)
 
 @app.route('/')
 def index():
-    objects = s3client.list_objects_v2(Bucket=constants.BUCKET.PROCESSED_FILE)['Contents']
-    objects = sorted(objects, key=lambda x: x['LastModified'], reverse=True)
-    books = [(html.escape(obj['Key']), clean_book_name(obj['Key'])) for obj in objects]
-    return render_template('kindle-index.j2', books=books)
-
-@app.route('/app')
-def _app():
     return render_template('current_status.html', current_status=current_status())
 
 @app.route('/book/<path:book>')
@@ -96,19 +101,6 @@ def search_books():
         books = book_search(terms)
         return json.dumps(books)
 
-def book_search(terms):
-    conditions = []
-    for term in terms:
-        condition = f"lower(book) like ?"
-        conditions.append(condition)
-
-    all_conditions = ' AND '.join(conditions)
-
-    wildcard_terms = [f'%{term}%' for term in terms]
-    cur = get_db().cursor()
-    rows = cur.execute('SELECT bot, book FROM books where %s LIMIT 30' % all_conditions, wildcard_terms)
-    return list(rows)
-
 @app.route('/book/fetch', methods=['POST'])
 def fetch_books():
     if request.json:
@@ -141,7 +133,7 @@ def fetch_books():
     if is_api:
         return job_key
     else:
-        return redirect(url_for('_app'))
+        return redirect(url_for('index'))
 
 @app.route('/books/batch_update', methods=['POST'])
 def batch_update():
