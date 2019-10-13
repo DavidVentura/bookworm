@@ -82,15 +82,15 @@ In charge of taking a file (as provided from IRC), unpacking it and, if necessar
 
 ### Web interface
 
-Status of books in metadata
+Status of books in metadata:
 
 ![](screenshots/status.png)
 
-Searching
+Search results:
 
-![](screenshots/search.png)
+![](screenshots/search_results.png)
 
-Locally available books
+Locally available books:
 ![](screenshots/available_books.png)
 
 ### Basic (Kindle) Web interface
