@@ -21,13 +21,13 @@ $ python bookworm/cli.py neverwhere gaiman
 ....
 16) {'bot': 'shytot', 'book': 'Neverwhere_ A Novel - Neil Gaiman.mobi'}
 Input the number to download: 16
-Status change {'STEP': 'REQUESTED'}
-Status change {'STEP': 'DOWNLOADING'}
-Status change {'STEP': 'DOWNLOADING', 'STATE': '25'}
-Status change {'STEP': 'DOWNLOADING', 'STATE': '45'}
-Status change {'STEP': 'DOWNLOADING', 'STATE': '70'}
-Status change {'STEP': 'DOWNLOADING', 'STATE': '95'}
-Status change {'STEP': 'DONE'}
+Status change 'REQUESTED'
+Status change 'DOWNLOADING'
+Status change 'DOWNLOADING', 'STATE': '25'
+Status change 'DOWNLOADING', 'STATE': '45'
+Status change 'DOWNLOADING', 'STATE': '70'
+Status change 'DOWNLOADING', 'STATE': '95'
+Status change 'DONE'
 ```
 
 or you can control this via HTTP:
@@ -81,7 +81,17 @@ In charge of taking a file (as provided from IRC), unpacking it and, if necessar
 
 
 ### Web interface
-TODO
+
+Status of books in metadata
+
+![](screenshots/status.png)
+
+Searching
+
+![](screenshots/search.png)
+
+Locally available books
+![](screenshots/available_books.png)
 
 ### Basic (Kindle) Web interface
 The kindle has a very basic webbrowser (I believe it renders up to HTML4, CSS2.1), which can be used to download (available) books directly.  
