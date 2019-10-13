@@ -29,10 +29,14 @@ book_status = None
 while True:
     r = requests.get('http://localhost:5000/books/status')
     all_statuses = r.json()
-    _b_status = all_statuses[_id]
+    for s in all_statuses:
+        if s['KEY'] == _id:
+            _b_status = s
+            break
+
     if _b_status != book_status:
         book_status = _b_status
-        print('Status change', book_status)
+        print('Status change', book_status['STEP'], book_status.get('STATE'))
     if book_status['STEP'] == 'DONE':
         break
     time.sleep(1)

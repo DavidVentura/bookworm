@@ -1,0 +1,21 @@
+{% include 'header.html' %}
+      <table class='u-full-width'>
+        <thead>
+          <tr>
+            <th>Key</th>
+            <th>Step</th>
+            <th>Status</th>
+          <tr>
+        </thead>
+        <tbody>
+            {% for entry in current_status %}
+            <tr>
+                <td>{{entry['name']}}</td>
+                <td><small>{{entry['STEP']}}</small></td>
+                <td>{{entry.get('STATE', '')}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+      </table>
+{% include 'footer.html' %}
+

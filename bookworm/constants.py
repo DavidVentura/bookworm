@@ -6,6 +6,9 @@ JOB_KEY_PREFIX = 'job_'
 JOB_TTL_REDIS = timedelta(days=5)
 
 class REDIS():
+    KEY_NAME = 'KEY'
+    BOOK_KEY = 'BOOK'
+    BOT_KEY = 'BOT'
     Q_BOOK_COMMANDS = 'BOOK_COMMANDS'
     Q_FETCH_FILE = 'FETCH_FILE'
     Q_UNPACK_FILE = 'UNPACK_FILE'

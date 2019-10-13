@@ -57,7 +57,6 @@ class IRCClient(irc.client.SimpleIRCClient):
             self.fetch_queue = command['meta']['fetch_file_queue']
 
             self.r.hset(self.job_key, REDIS.STEP_KEY, 'REQUESTED')
-            self.r.expire(self.job_key, JOB_TTL_REDIS)
             self.connection.privmsg(self.target, irc_command)
 
     def on_pubmsg(self, connection, event):

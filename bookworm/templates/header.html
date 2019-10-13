@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/static/css/normalize.css">
+    <link rel="stylesheet" href="/static/css/skeleton.css">
+    <link rel="stylesheet" href="/static/css/custom.css">
+  </head>
+  <body>
+      <form action='/book/search' method='POST'>
+          <input name='terms' value='{{search_query}}' type='text' />
+          <input type='submit' value='search' class='button-primary' name='search' />
+      </form>
+
