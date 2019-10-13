@@ -70,12 +70,13 @@ def search_books():
     cur = get_db().cursor()
     conditions = []
     for term in terms:
-        condition = f"lower(book) like '%{term}%'"
+        condition = f"lower(book) like ?"
         conditions.append(condition)
 
     all_conditions = ' AND '.join(conditions)
 
-    rows = cur.execute('SELECT bot, book FROM books where %s LIMIT 100' % all_conditions)
+    wildcard_terms = [f'%{term}%' for term in terms]
+    rows = cur.execute('SELECT bot, book FROM books where %s LIMIT 30' % all_conditions, wildcard_terms)
     return json.dumps(list(rows))
 
 @app.route('/book/fetch', methods=['POST'])

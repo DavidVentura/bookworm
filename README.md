@@ -109,7 +109,6 @@ You should trigger this periodically (say, once a month) otherwise you will not 
 # TODO
 
 * Web UI 
-* Prevent SQL injection on the `search` endpoint
 
 # Misc
 
