@@ -60,7 +60,13 @@ def unpack_and_convert(job_key, s3key, s3client, redis, meta):
             with tempfile.NamedTemporaryFile(suffix=ext) as original:
                 original.write(data)
                 original.flush()
-                converted_data = convert_to_mobi(original.name)
+                try:
+                    converted_data = convert_to_mobi(original.name)
+                except subprocess.CalledProcessError as e:
+                    redis.hset(job_key, REDIS.STEP_KEY, 'FAILED')
+                    redis.hset(job_key, REDIS.STATE_KEY, 'At conversion: %s' % str(e))
+                    return
+
                 data = converted_data
             fname = fname_no_ext + '.mobi'
         store_file(s3client, fname, data, meta)
