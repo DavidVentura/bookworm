@@ -85,6 +85,7 @@ In charge of taking a file (as provided from IRC), unpacking it and, if necessar
 Status of books in metadata:
 
 ![](screenshots/status.png)
+![](screenshots/kindle_status.png)
 
 Search results:
 
@@ -92,21 +93,9 @@ Search results:
 
 Locally available books:
 ![](screenshots/available_books.png)
+![](screenshots/kindle_available.png)
 
-### Basic (Kindle) Web interface
-The kindle has a very basic webbrowser (I believe it renders up to HTML4, CSS2.1), which can be used to download (available) books directly.  
-At the moment I re-route at nginx based on user agent
-
-To test, you can use `dillo` which has a set of features similar to the kindle's web browser.
-
-```
-if ($http_user_agent ~* "armv7l") {
-    rewrite ^/(.*)$ /books/kindle;
-}
-```
-
-There's a special template for the kindle (see `kindle-index.j2`) that makes it
-somewhat easy to download the books even with the clunky kindle controls.
+This web interface works well in the kindle.
 
 # Batch process
 

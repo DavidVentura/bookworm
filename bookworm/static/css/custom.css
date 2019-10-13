@@ -7,3 +7,9 @@ body {
     max-width: 1000px;
     margin: 50px auto;
 }
+input {
+    border-color: #666 !important;
+}
+a {
+    color: #4BA4BF;
+}
