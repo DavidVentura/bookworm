@@ -47,6 +47,13 @@ def clean_book_name(book):
 def _static(path):
     return send_from_directory('static', path)
 
+@app.route('/books/available')
+def available():
+    objects = s3client.list_objects_v2(Bucket=constants.BUCKET.PROCESSED_FILE)['Contents']
+    objects = sorted(objects, key=lambda x: x['LastModified'], reverse=True)
+    books = [(html.escape(obj['Key']), clean_book_name(obj['Key'])) for obj in objects]
+    return render_template('available_books.html', books=books)
+
 @app.route('/')
 def index():
     objects = s3client.list_objects_v2(Bucket=constants.BUCKET.PROCESSED_FILE)['Contents']

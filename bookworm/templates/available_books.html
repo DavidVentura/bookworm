@@ -1,0 +1,22 @@
+{% include 'header.html' %}
+  <table>
+    <thead>
+      <tr>
+        <th>Book</th>
+        <th></th>
+      <tr>
+    </thead>
+    <tbody>
+    {%for book, clean_name in books %}
+      <tr>
+      <td>
+        {{clean_name}}
+      </td>
+      <td>
+        <a target='_blank' href='/book/{{book}}'>Download</a>
+      </td>
+      </tr>
+    {%-endfor%}
+    </tbody>
+  </table>
+{% include 'footer.html' %}
