@@ -99,7 +99,8 @@ def fetch_books():
 @app.route('/books/batch_update', methods=['POST'])
 def batch_update():
     fetch = request.json
-    if fetch['secret_key'] != 'super_secret':
+    if fetch is None or 'secret_key' not in fetch \
+            or fetch['secret_key'] != 'super_secret':
         return '401'
 
     batch_update_commands = ['@pondering42', '@dv8', '@shytot', '@dragnbreaker', '@Xon-new']
@@ -118,12 +119,14 @@ def batch_update():
     return ''
 
 def main():
+    create_statements = [
+            'CREATE TABLE IF NOT EXISTS books (bot TEXT(40), book TEXT(200), size INT)',
+            'CREATE UNIQUE INDEX IF NOT EXISTS books_unique ON books(bot, book)',
+            ]
     db = sqlite3.connect('books.db')
     c = db.cursor()
-    sql = 'CREATE TABLE IF NOT EXISTS books (bot TEXT(40), book TEXT(200), size INT)'
-    c.execute(sql)
-    sql = 'CREATE UNIQUE INDEX IF NOT EXISTS books_unique ON books(bot, book)'
-    c.execute(sql)
+    for stmt in create_statements:
+        c.execute(stmt)
     db.commit()
     db.close()
 

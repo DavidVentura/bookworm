@@ -5,7 +5,7 @@ import time
 import shlex
 
 from threading import Thread
-from bookworm.constants import IRC, REDIS, JOB_KEY_PREFIX
+from bookworm.constants import IRC, REDIS, JOB_KEY_PREFIX, JOB_TTL_REDIS
 from bookworm.logger import log, setup_logger
 from bookworm.utils import random_hash
 
@@ -57,6 +57,7 @@ class IRCClient(irc.client.SimpleIRCClient):
             self.fetch_queue = command['meta']['fetch_file_queue']
 
             self.r.hset(self.job_key, REDIS.STEP_KEY, 'REQUESTED')
+            self.r.expire(self.job_key, JOB_TTL_REDIS)
             self.connection.privmsg(self.target, irc_command)
 
     def on_pubmsg(self, connection, event):
