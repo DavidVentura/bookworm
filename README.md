@@ -105,10 +105,6 @@ To populate this cache, there's an API endpoint (`books/batch_update`) that trig
 You should trigger this periodically (say, once a month) otherwise you will not be able to see any new book that is added to the lists.
 
 
-# TODO
-
-* Web UI 
-
 # Misc
 
 To update the graph in the README
