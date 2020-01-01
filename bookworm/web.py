@@ -1,15 +1,30 @@
 import html
 import json
+import logging
 import os
 import re
 import redis
 import sqlite3
+import time
+import waitress
 from flask import Flask, render_template, make_response, request, g, send_from_directory, redirect, url_for
 from bookworm import s3, constants
 
 s3client = s3.client()
 app = Flask(__name__, static_url_path='')
 r = redis.StrictRedis(host='localhost', port=6379, decode_responses=True)
+log = logging.getLogger(__name__)
+
+
+@app.before_request
+def before_request():
+    g.start = time.time()
+
+
+@app.teardown_request
+def teardown_request(exception=None):
+    log.debug(f'request took %sms', time.time()-g.start)
+
 
 def get_db():
     def dict_factory(cursor, row):
@@ -169,7 +184,7 @@ def main():
     db.commit()
     db.close()
 
-    app.run(host='0.0.0.0', debug=True)
+    waitress.serve(app, listen='0.0.0.0:5000')
 
 if __name__ == '__main__':
     main()
