@@ -38,7 +38,6 @@ def insert_books(books):
     db = sqlite3.connect('books.db')
     c = db.cursor()
     entries = []
-    c.executemany('INSERT OR IGNORE INTO books(bot, book, size) values (?,?,?)',
-            books)
+    c.executemany('INSERT OR IGNORE INTO books(bot, book, size) values (?,?,?)', books)
     db.commit()
     db.close()
