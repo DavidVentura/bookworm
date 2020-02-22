@@ -4,6 +4,7 @@ Description=Bookworm %i service
 [Service]
 User=david
 Type=simple
+WorkingDirectory=/home/david/git/irc-books/
 ExecStart=/home/david/git/irc-books/.venv/bin/%i
 Nice=5
 
