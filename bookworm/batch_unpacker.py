@@ -47,6 +47,7 @@ def unpack_and_store(job_key, s3key, s3client, redis, meta):
             decoded = data.decode('latin-1')
 
         books = parse.lines_to_dicts(decoded.replace('\r', '').splitlines())
+        log.info('Found %d books in this batch', len(books))
         parse.insert_books(books)
 
     #delete_raw_file(s3client, s3key, meta)
