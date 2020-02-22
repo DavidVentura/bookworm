@@ -157,7 +157,7 @@ def batch_update():
             or fetch['secret_key'] != 'super_secret':
         return '401'
 
-    batch_update_commands = ['@pondering42', '@dv8', '@shytot', '@dragnbreaker', '@Xon-new']
+    batch_update_commands = ['@pondering42', '@dv8', '@shytot', '@dragnbreaker', '@Xon-new', '@oatmeal']
     for command in batch_update_commands:
         job_key = constants.JOB_KEY_PREFIX + command.replace('@', 'batch_')
         data = {'command': command,
@@ -174,7 +174,7 @@ def batch_update():
 
 def main():
     create_statements = [
-            'CREATE TABLE IF NOT EXISTS books (bot TEXT(40), book TEXT(200), size INT)',
+            'CREATE TABLE IF NOT EXISTS books (bot TEXT(40), book TEXT(200), size INT, inserted_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP)',
             'CREATE UNIQUE INDEX IF NOT EXISTS books_unique ON books(bot, book)',
             ]
     db = sqlite3.connect('books.db')
@@ -184,7 +184,9 @@ def main():
     db.commit()
     db.close()
 
-    waitress.serve(app, listen='0.0.0.0:5000')
+    port = 5000
+    log.info("Starting server listening on %s", port)
+    waitress.serve(app, listen='0.0.0.0:%s' % port)
 
 if __name__ == '__main__':
     main()
