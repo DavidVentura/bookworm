@@ -23,6 +23,7 @@ class IRCClient(irc.client.SimpleIRCClient):
         self.name = name
         self.startup = time.time()
         self.r = redis.StrictRedis(host='localhost', port=6379)
+        self.busy = False
 
         self.connect("irc.irchighway.net", 6667, name)
 
@@ -36,6 +37,10 @@ class IRCClient(irc.client.SimpleIRCClient):
 
     def wait_for_commands(self):
         while True:
+            if self.busy:
+                log.info('Busy with another task..')
+                time.sleep(2)
+                continue
             log.info('Waiting for message on %s', REDIS.Q_BOOK_COMMANDS)
             topic, message = self.r.blpop(REDIS.Q_BOOK_COMMANDS)
             log.info('got message: %s', message)
@@ -58,6 +63,7 @@ class IRCClient(irc.client.SimpleIRCClient):
 
             self.r.hset(self.job_key, REDIS.STEP_KEY, 'REQUESTED')
             self.connection.privmsg(self.target, irc_command)
+            self.busy = True
 
     def on_pubmsg(self, connection, event):
         log.debug('pubmsg %s', event)
@@ -95,6 +101,7 @@ class IRCClient(irc.client.SimpleIRCClient):
                            "meta": self.meta})
         log.info('Publishing to %s: %s', self.fetch_queue, data)
         self.r.rpush(self.fetch_queue, data)
+        self.busy = False
 
     def on_disconnect(self, connection, event):
         sys.exit(0)

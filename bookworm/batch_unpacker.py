@@ -46,9 +46,8 @@ def unpack_and_store(job_key, s3key, s3client, redis, meta):
         except UnicodeDecodeError:
             decoded = data.decode('latin-1')
 
-        books = parse.lines_to_dicts(decoded.replace('\r', '').splitlines())
-        log.info('Found %d books in this batch', len(books))
-        parse.insert_books(books)
+        found = parse.parse_and_insert_lines(decoded.replace('\r', '').splitlines())
+        log.info('Found %d books in this batch', found)
 
     #delete_raw_file(s3client, s3key, meta)
     redis.hset(job_key, REDIS.STEP_KEY, 'DONE')

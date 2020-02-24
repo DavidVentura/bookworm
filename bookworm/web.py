@@ -1,18 +1,22 @@
+import datetime
 import html
 import json
 import logging
 import os
 import re
 import redis
-import sqlite3
 import time
+
 import waitress
+
 from flask import Flask, render_template, make_response, request, g, send_from_directory, redirect, url_for
-from bookworm import s3, constants
+
+from bookworm import s3, constants, db
 
 s3client = s3.client()
 app = Flask(__name__, static_url_path='')
 r = redis.StrictRedis(host='localhost', port=6379, decode_responses=True)
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
 
@@ -27,30 +31,30 @@ def teardown_request(exception=None):
 
 
 def get_db():
-    def dict_factory(cursor, row):
-        d = {}
-        for idx, col in enumerate(cursor.description):
-            d[col[0]] = row[idx]
-        return d
-    db = getattr(g, '_database', None)
-    if db is None:
-        db = sqlite3.connect('books.db')
-        db.row_factory = dict_factory
+    _db = getattr(g, '_database', None)
+    if _db is None:
+        _db = db.get_db()
         g._database = db
-    return db
+    return _db
 
 def book_search(terms):
     conditions = []
+    valid_terms = []
     for term in terms:
-        condition = f"lower(book) like ?"
-        conditions.append(condition)
+        if len(term) <= 2:
+            continue
+        valid_terms.append(term)
 
-    all_conditions = ' AND '.join(conditions)
+    all_conditions = ' AND '.join(valid_terms)
 
-    wildcard_terms = [f'%{term}%' for term in terms]
+    log.info('Querying: %s: %s', valid_terms, all_conditions)
+    start = datetime.datetime.now()
     cur = get_db().cursor()
-    rows = cur.execute('SELECT bot, book FROM books where %s LIMIT 30' % all_conditions, wildcard_terms)
-    return list(rows)
+    rows = cur.execute('SELECT bot, books.book FROM books inner join tokens on books.id = tokens.pkey where valid AND tokens.book match \'%s\' LIMIT 30' % all_conditions)
+    rows = list(rows)
+    time_taken = datetime.datetime.now() - start
+    log.info('Done querying: %s, took: %s', valid_terms, time_taken)
+    return rows
 
 def current_status():
     keys = r.keys(f'{constants.JOB_KEY_PREFIX}*')
@@ -169,21 +173,12 @@ def batch_update():
                     'processed_file_bucket': constants.BUCKET.PROCESSED_FILE,
                 }
                }
+        log.info('Pushing command: %s', data)
         r.rpush(constants.REDIS.Q_BOOK_COMMANDS, json.dumps(data))
     return ''
 
 def main():
-    create_statements = [
-            'CREATE TABLE IF NOT EXISTS books (bot TEXT(40), book TEXT(200), size INT, inserted_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP)',
-            'CREATE UNIQUE INDEX IF NOT EXISTS books_unique ON books(bot, book)',
-            ]
-    db = sqlite3.connect('books.db')
-    c = db.cursor()
-    for stmt in create_statements:
-        c.execute(stmt)
-    db.commit()
-    db.close()
-
+    db.init_db()
     port = 5000
     log.info("Starting server listening on %s", port)
     waitress.serve(app, listen='0.0.0.0:%s' % port)
