@@ -4,12 +4,15 @@ import socket
 import sys
 import time
 import tempfile
-from threading import Thread
+from threading import Thread, Lock
 from subprocess import check_output
 from bookworm import s3, parse
 from bookworm.logger import log, setup_logger
 from bookworm.constants import UNPACKABLE_EXTENSIONS, REDIS
 import redis
+
+
+db_lock = Lock()
 
 def should_unpack(fname):
     fname = fname.lower()
@@ -46,7 +49,11 @@ def unpack_and_store(job_key, s3key, s3client, redis, meta):
         except UnicodeDecodeError:
             decoded = data.decode('latin-1')
 
+        log.info('Acquiring DB lock..')
+        db_lock.acquire()
         found = parse.parse_and_insert_lines(decoded.replace('\r', '').splitlines())
+        db_lock.release()
+        log.info('Released DB lock..')
         log.info('Found %d books in this batch', found)
 
     #delete_raw_file(s3client, s3key, meta)
