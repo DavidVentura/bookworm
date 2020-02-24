@@ -3,11 +3,13 @@ import sqlite3
 import time
 import logging
 
+from threading import Lock
 from bookworm import db
 ONE_GB = 2**30
 ONE_MB = 2**20
 ONE_KB = 2**10
 
+db_lock = Lock()
 
 log = logging.getLogger(__name__)
 r = re.compile(r'^!(?P<bot>[a-z0-9-]+?) (?P<book>.+)\s(::INFO::|-+)\s+(?P<size>[0-9.]+\s*[BKMG]+)\s*$', re.I)
@@ -41,7 +43,11 @@ def _lines_to_dicts(lines):
 
 def parse_and_insert_lines(lines):
     books = _lines_to_dicts(lines)
+    log.info('Acquiring DB lock..')
+    db_lock.acquire()
     insert_books(books)
+    db_lock.release()
+    log.info('Released DB lock..')
     return len(books)
     
 
