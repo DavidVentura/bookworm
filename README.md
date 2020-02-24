@@ -79,12 +79,13 @@ $ http POST localhost:5000/book/fetch bot=Pondering42 book="some-book-from the i
 
 ```
 sudo cp services/bookworm@.service /etc/systemd/system/
+sudo cp services/bookworm-ircclient@.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl start bookworm@ircclient.service
 sudo systemctl start bookworm@file_fetcher.service
 sudo systemctl start bookworm@unpacker.service
 sudo systemctl start bookworm@web.service
 sudo systemctl start bookworm@db_cache_populate.service
+sudo systemctl start bookworm-ircclient@{1..4}.service
 ```
 
 ## IRC Client

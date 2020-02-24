@@ -1,0 +1,12 @@
+[Unit]
+Description=Bookworm IRCClient %i service
+
+[Service]
+User=david
+Type=simple
+WorkingDirectory=/home/david/git/irc-books/
+ExecStart=/home/david/git/irc-books/.venv/bin/ircclient
+Nice=5
+
+[Install]
+WantedBy=multi-user.target
