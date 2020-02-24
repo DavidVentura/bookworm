@@ -80,9 +80,10 @@ def _static(path):
 
 @app.route('/books/available')
 def available():
-    objects = s3client.list_objects_v2(Bucket=constants.BUCKET.PROCESSED_FILE)['Contents']
-    objects = sorted(objects, key=lambda x: x['LastModified'], reverse=True)
-    books = [(html.escape(obj['Key'], quote=False), clean_book_name(obj['Key'])) for obj in objects]
+    objects = s3client.list_objects_v2(Bucket=constants.BUCKET.PROCESSED_FILE)
+    contents = objects['Contents'] if objects['KeyCount'] > 0 else []
+    contents = sorted(contents, key=lambda x: x['LastModified'], reverse=True)
+    books = [(html.escape(obj['Key'], quote=False), clean_book_name(obj['Key'])) for obj in contents]
     return render_template('available_books.html', books=books)
 
 @app.route('/')
@@ -179,7 +180,7 @@ def batch_update():
 
 def main():
     db.init_db()
-    existing_buckets = s3client.list_buckets()['Buckets']
+    existing_buckets = [b['Name'] for b in s3client.list_buckets()['Buckets']]
     for bucket in [constants.BUCKET.RAW_FILE, constants.BUCKET.PROCESSED_FILE]:
         if bucket not in existing_buckets:
             log.info('Creating bucket %s', bucket)
