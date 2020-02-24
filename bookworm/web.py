@@ -112,12 +112,11 @@ def search_books():
     if request.method == 'POST':
         orig_terms = request.form.get('terms')
         terms = orig_terms.split()
-        books = book_search(terms)
-        return render_template('search_results.html', search_results=books, search_query=orig_terms)
     else:
+        # FIXME API endpoint
         terms = request.args.get('terms').split()
-        books = book_search(terms)
-        return json.dumps(books)
+    books = book_search(terms)
+    return render_template('search_results.html', search_results=books, search_query=orig_terms)
 
 @app.route('/book/fetch', methods=['POST'])
 def fetch_books():
