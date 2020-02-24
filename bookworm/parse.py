@@ -51,11 +51,12 @@ def parse_and_insert_lines(lines):
     return len(books)
 
 def count_books_without_tokens(c):
+    log.info('Querying how many books have no tokens..')
     rows = c.execute('''
-    SELECT count(1) FROM books
-    LEFT JOIN tokens on tokens.pkey = books.id
-    WHERE tokens.pkey IS NULL
-    AND books.valid
+        SELECT count(1) FROM books
+        LEFT JOIN tokens on tokens.oid = books.id
+        WHERE books.valid
+        AND tokens.oid IS NULL
     ''')
     count = rows[0][0]
     log.info('There are %s books without tokens', count)
@@ -68,15 +69,13 @@ def insert_books(books):
     log.info('About to insert %s books', len(books))
     c.executemany('INSERT OR IGNORE INTO books(bot, book, size, valid) values (?,?,?,?)', books)
     log.info('Finished inserting books, will now update FTS tokens table')
-    while count_books_without_tokens(c) > 0:
-        c.execute('''
-        INSERT INTO tokens(book, pkey)
-        SELECT books.book, books.id FROM books
-        LEFT JOIN tokens on tokens.pkey = books.id
-        WHERE tokens.pkey IS NULL
-        AND books.valid
-        LIMIT 10000
-        ''')
+    c.execute('''
+    INSERT INTO tokens(oid, book)
+    SELECT books.id, books.book FROM books
+    LEFT JOIN tokens on tokens.oid = books.id
+    WHERE books.valid
+    AND tokens.oid IS NULL
+    ''')
 
     log.info('Finished updating FTS, committing')
     _db.commit()
