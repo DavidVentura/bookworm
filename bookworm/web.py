@@ -48,7 +48,7 @@ def book_search(terms):
     log.info('Querying: %s: %s', valid_terms, all_conditions)
     start = datetime.datetime.now()
     cur = get_db().cursor()
-    rows = cur.execute('SELECT bot, books.book FROM books inner join tokens on books.id = tokens.pkey where valid AND tokens.book match \'%s\' LIMIT 30' % all_conditions)
+    rows = cur.execute('SELECT bot, books.book FROM books inner join tokens on books.id = tokens.oid where valid AND tokens.book match \'%s\' LIMIT 30' % all_conditions)
     rows = list(rows)
     time_taken = datetime.datetime.now() - start
     log.info('Done querying: %s, took: %s', valid_terms, time_taken)
