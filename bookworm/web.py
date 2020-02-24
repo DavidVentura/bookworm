@@ -111,10 +111,9 @@ def serve_books(book):
 def search_books():
     if request.method == 'POST':
         orig_terms = request.form.get('terms')
-        terms = orig_terms.split()
     else:
-        # FIXME API endpoint
-        terms = request.args.get('terms').split()
+        orig_terms = request.args.get('terms')
+    terms = orig_terms.split()
     books = book_search(terms)
     return render_template('search_results.html', search_results=books, search_query=orig_terms)
 
