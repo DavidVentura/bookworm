@@ -26,7 +26,7 @@ def _lines_to_dicts(lines):
         bot = match.group('bot').strip()
         book = match.group('book').strip()
         size = match.group('size').strip().lower()
-    
+
         if 'gb' in size:
             size = int(float(size.replace('gb', '')) * ONE_GB)
         elif 'mb' in size:
@@ -35,7 +35,7 @@ def _lines_to_dicts(lines):
             size = int(float(size.replace('kb', '')) * ONE_KB)
         elif 'b' in size:
             size = int(float(size.replace('b', '')))
-    
+
         b = book.lower()
         valid = 'pdf' not in b and 'html' not in b and 'txt' not in b
         books.append((bot, book, size, valid))
@@ -50,7 +50,17 @@ def parse_and_insert_lines(lines):
     db_lock.release()
     log.info('Released DB lock..')
     return len(books)
-    
+
+def count_books_without_tokens(c):
+    rows = c.execute('''
+    SELECT count(1) FROM books
+    LEFT JOIN tokens on tokens.pkey = books.id
+    WHERE tokens.pkey IS NULL
+    AND books.valid
+    ''')
+    count = rows[0][0]
+    log.info('There are %s books without tokens', count)
+    return count
 
 def insert_books(books):
     _db = db.get_db()
@@ -59,13 +69,16 @@ def insert_books(books):
     log.info('About to insert %s books', len(books))
     c.executemany('INSERT OR IGNORE INTO books(bot, book, size, valid) values (?,?,?,?)', books)
     log.info('Finished inserting books, will now update FTS tokens table')
-    c.execute('''
-    INSERT INTO tokens(book, pkey)
-    SELECT books.book, books.id FROM books
-    LEFT JOIN tokens on tokens.pkey = books.id
-    WHERE tokens.pkey IS NULL
-    AND books.valid
-    ''')
+    while count_books_without_tokens(c) > 0:
+        c.execute('''
+        INSERT INTO tokens(book, pkey)
+        SELECT books.book, books.id FROM books
+        LEFT JOIN tokens on tokens.pkey = books.id
+        WHERE tokens.pkey IS NULL
+        AND books.valid
+        LIMIT 10000
+        ''')
+
     log.info('Finished updating FTS, committing')
     _db.commit()
     log.info('DONE')
