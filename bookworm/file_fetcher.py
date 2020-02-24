@@ -4,10 +4,11 @@ import sys
 import time
 from threading import Thread
 from bookworm.constants import REDIS
-from bookworm.logger import log, setup_logger
 from bookworm import s3
 
 import redis
+
+log = logging.getLogger(__name__)
 
 def nc(**kwargs):
     try:
@@ -56,7 +57,6 @@ def netcat(filename, ip, port, size, job_key, s3client, _redis, meta):
 
 def main():
     r = redis.StrictRedis(host='localhost', port=6379)
-    setup_logger()
 
     while True:
         log.info('Waiting for message on %s', REDIS.Q_FETCH_FILE)

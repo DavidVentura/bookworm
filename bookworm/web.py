@@ -16,9 +16,7 @@ from bookworm import s3, constants, db
 s3client = s3.client()
 app = Flask(__name__, static_url_path='')
 r = redis.StrictRedis(host='localhost', port=6379, decode_responses=True)
-logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
-
 
 @app.before_request
 def before_request():

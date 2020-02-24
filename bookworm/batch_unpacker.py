@@ -4,13 +4,15 @@ import socket
 import sys
 import time
 import tempfile
+import logging
 from threading import Thread, Lock
 from subprocess import check_output
 from bookworm import s3, parse
-from bookworm.logger import log, setup_logger
 from bookworm.constants import UNPACKABLE_EXTENSIONS, REDIS
 import redis
 
+
+log = logging.getLogger(__name__)
 
 db_lock = Lock()
 
@@ -88,7 +90,6 @@ def unpack(s3key, s3client, redis, meta):
 
 def main():
     r = redis.StrictRedis(host='localhost', port=6379)
-    setup_logger()
     s3client = s3.client()
     while True:
         log.info('Waiting for message on %s', REDIS.Q_PROCESS_BATCH_FILE)

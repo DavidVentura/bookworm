@@ -1,6 +1,7 @@
 import re
 import sqlite3
 import time
+import logging
 
 from bookworm import db
 ONE_GB = 2**30
@@ -8,6 +9,7 @@ ONE_MB = 2**20
 ONE_KB = 2**10
 
 
+log = logging.getLogger(__name__)
 r = re.compile(r'^!(?P<bot>[a-z0-9-]+?) (?P<book>.+)\s(::INFO::|-+)\s+(?P<size>[0-9.]+\s*[BKMG]+)\s*$', re.I)
 # tags_re = re.compile(r'[\[\(](?P<tag>.*?)[\]\)]')
 
@@ -47,7 +49,9 @@ def insert_books(books):
     _db = db.get_db()
     c = _db.cursor()
     entries = []
+    log.info('About to insert %s books', len(books))
     c.executemany('INSERT OR IGNORE INTO books(bot, book, size, valid) values (?,?,?,?)', books)
+    log.info('Finished inserting books, will now update FTS tokens table')
     c.execute('''
     INSERT INTO tokens(book, pkey)
     SELECT books.book, books.id FROM books
@@ -55,5 +59,7 @@ def insert_books(books):
     WHERE tokens.pkey IS NULL
     AND books.valid
     ''')
+    log.info('Finished updating FTS, committing')
     _db.commit()
+    log.info('DONE')
     _db.close()

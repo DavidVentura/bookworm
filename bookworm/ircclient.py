@@ -3,16 +3,17 @@ import json
 import sys
 import time
 import shlex
+import logging
 
 from threading import Thread
 from bookworm.constants import IRC, REDIS, JOB_KEY_PREFIX, JOB_TTL_REDIS
-from bookworm.logger import log, setup_logger
 from bookworm.utils import random_hash
 
 import redis
 import irc.client
 import jaraco.stream.buffer
 
+log = logging.getLogger(__name__)
 
 class IRCClient(irc.client.SimpleIRCClient):
     def __init__(self, target, name):
@@ -109,7 +110,6 @@ class IRCClient(irc.client.SimpleIRCClient):
 
 def main():
 
-    setup_logger()
     name = "bookbot" + random_hash()
 
     c = IRCClient(IRC.CHANNEL, name)
