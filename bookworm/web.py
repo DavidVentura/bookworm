@@ -179,6 +179,15 @@ def batch_update():
 
 def main():
     db.init_db()
+    existing_buckets = s3client.list_buckets()['Buckets']
+    for bucket in [constants.BUCKET.RAW_FILE, constants.BUCKET.PROCESSED_FILE]:
+        if bucket not in existing_buckets:
+            log.info('Creating bucket %s', bucket)
+            s3client.create_bucket(Bucket=bucket)
+            log.info('Created bucket %s', bucket)
+        else:
+            log.info('Bucket %s already exists -- no need to create it', bucket)
+
     port = 5000
     log.info("Starting server listening on %s", port)
     waitress.serve(app, listen='0.0.0.0:%s' % port)
