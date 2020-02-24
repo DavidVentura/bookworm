@@ -45,6 +45,7 @@ def parse_and_insert_lines(lines):
     books = _lines_to_dicts(lines)
     log.info('Acquiring DB lock..')
     db_lock.acquire()
+    log.info('Got DB lock!')
     insert_books(books)
     db_lock.release()
     log.info('Released DB lock..')
