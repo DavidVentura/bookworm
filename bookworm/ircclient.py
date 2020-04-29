@@ -41,6 +41,10 @@ class IRCClient(irc.client.SimpleIRCClient):
             if self.busy:
                 log.info('Busy with another task..')
                 time.sleep(2)
+                if time.time() - self.request_time >= 60:
+                    # give up
+                    self.r.hset(self.job_key, REDIS.STEP_KEY, 'TIMEOUT')
+                    self.busy = False
                 continue
             log.info('Waiting for message on %s', REDIS.Q_BOOK_COMMANDS)
             topic, message = self.r.blpop(REDIS.Q_BOOK_COMMANDS)
@@ -63,6 +67,7 @@ class IRCClient(irc.client.SimpleIRCClient):
             self.fetch_queue = command['meta']['fetch_file_queue']
 
             self.r.hset(self.job_key, REDIS.STEP_KEY, 'REQUESTED')
+            self.request_time = time.time()
             self.connection.privmsg(self.target, irc_command)
             self.busy = True
 
