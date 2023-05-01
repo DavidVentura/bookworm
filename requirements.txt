@@ -1,6 +1,6 @@
 boto3==1.9.173
 botocore==1.12.173
-Flask==1.0.3
+Flask==2.3.2
 irc==17.1
 jaraco.classes==2.0
 jaraco.collections==2.0
