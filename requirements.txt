@@ -11,5 +11,5 @@ jaraco.stream==2.0
 jaraco.text==3.0
 Jinja2==2.11.3
 redis==3.2.1
-requests==2.22.0
+requests==2.31.0
 waitress==1.4.3
